@@ -1,0 +1,6 @@
+{
+  "name": "Struikrovers.Presentation",
+  "rootNamespace": "Struikrovers.Presentation",
+  "references": [ "Struikrovers.Core", "Unity.TextMeshPro", "UnityEngine.UI" ],
+  "autoReferenced": true
+}

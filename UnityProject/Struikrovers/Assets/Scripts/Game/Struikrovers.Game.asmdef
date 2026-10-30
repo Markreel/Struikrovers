@@ -1,0 +1,6 @@
+{
+  "name": "Struikrovers.Game",
+  "rootNamespace": "Struikrovers.Game",
+  "references": [ "Struikrovers.Core", "Struikrovers.Presentation", "Unity.InputSystem" ],
+  "autoReferenced": true
+}

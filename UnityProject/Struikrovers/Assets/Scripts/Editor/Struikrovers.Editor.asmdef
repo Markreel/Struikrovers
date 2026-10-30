@@ -1,0 +1,7 @@
+{
+  "name": "Struikrovers.Editor",
+  "rootNamespace": "",
+  "references": [ "Struikrovers.Game" ],
+  "includePlatforms": [ "Editor" ],
+  "autoReferenced": true
+}

@@ -1,0 +1,59 @@
+using System.Collections.Generic;
+using UnityEngine;
+
+namespace Struikrovers.Core
+{
+    /// The Bandit has picked an enemy Royalty and now chooses where to end up.
+    /// Clicking another enemy Royalty switches the preview; Cancel goes back.
+    public sealed class AbductionPreviewState : TurnState
+    {
+        private readonly HashSet<Vector2Int> abductionTargets;
+
+        public AbductionPlan Plan { get; }
+
+        public AbductionPreviewState(
+            TurnManager turn, AbductionPlan plan, HashSet<Vector2Int> abductionTargets)
+            : base(turn)
+        {
+            Plan = plan;
+            this.abductionTargets = abductionTargets;
+        }
+
+        public override bool CanCancel => true;
+        public override IReadOnlyCollection<Vector2Int> Destinations => Plan.Destinations;
+        public override IReadOnlyCollection<Vector2Int> AbductionTargets => abductionTargets;
+
+        public override void OnTileClicked(Vector2Int position)
+        {
+            // Pick a different Royalty.
+            if (abductionTargets.Contains(position))
+            {
+                if (Turn.AbductionRules.TryPlan(Pawn, position, Turn.RolledMovement, out AbductionPlan other))
+                    Turn.ChangeState(new AbductionPreviewState(Turn, other, abductionTargets));
+
+                return;
+            }
+
+            if (!Plan.Destinations.Contains(position))
+                return;
+
+            Pawn royalty = Plan.Royalty;
+            if (!Turn.AbductionRules.CommitPlan(Pawn, Plan, position))
+                return;
+
+            Turn.Raise(TurnEvent.Abducted(royalty, Pawn));
+
+            // Running straight home with the captive delivers it.
+            Turn.ResolveDelivery(Pawn);
+
+            // Movement is over; the Bandit can now finish its activation.
+            Turn.ChangeState(new ChooseActionState(Turn));
+        }
+
+        public override void OnCancel()
+        {
+            // Restores the original Bandit movement options.
+            Turn.ChangeState(new ChooseDestinationState(Turn));
+        }
+    }
+}
