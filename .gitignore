@@ -1,0 +1,34 @@
+# =========================================================================
+# Aangepaste paden voor jouw mappenstructuur
+# =========================================================================
+
+/UnityProject/Struikrovers/[Ll]ibrary/
+/UnityProject/Struikrovers/[Tt]emp/
+/UnityProject/Struikrovers/[Oo]bj/
+/UnityProject/Struikrovers/[Build]/
+/UnityProject/Struikrovers/[Bb]uilds/
+/UnityProject/Struikrovers/[Cc]apstures/
+/UnityProject/Struikrovers/[Mm]emoryCaptures/
+/UnityProject/Struikrovers/[Ll]ogs/
+/UnityProject/Struikrovers/[Vv]ideoCaptures/
+
+# Door Unity gegenereerde projectbestanden in de submap negeren
+/UnityProject/Struikrovers/*.csproj
+/UnityProject/Struikrovers/*.unityproj
+/UnityProject/Struikrovers/*.sln
+/UnityProject/Struikrovers/*.suo
+/UnityProject/Struikrovers/*.tmp
+/UnityProject/Struikrovers/*.user
+/UnityProject/Struikrovers/*.userprefs
+/UnityProject/Struikrovers/*.pidb
+/UnityProject/Struikrovers/*.booproj
+/UnityProject/Struikrovers/*.svd
+/UnityProject/Struikrovers/*.pdb
+/UnityProject/Struikrovers/*.opendb
+/UnityProject/Struikrovers/*.VC.db
+/UnityProject/Struikrovers/CrashReport*
+
+# Gebruikersspecifieke instellingen buiten de Unity-map
+.vs/
+sysinfo.txt
+*.user

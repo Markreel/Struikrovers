@@ -1,0 +1,13 @@
+
+{
+  "width": 5,
+  "height": 5,
+  "symmetry": "rotate90",
+  "tiles": [
+    ["grass", "grass", "tree", "grass", "grass"],
+    ["grass", "bush", "grass", "bush", "grass"],
+    ["tree", "grass", "tower", "grass", "tree"],
+    ["grass", "bush", "grass", "bush", "grass"],
+    ["grass", "grass", "tree", "grass", "grass"]
+  ]
+}
