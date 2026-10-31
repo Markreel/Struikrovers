@@ -4,23 +4,25 @@ using UnityEngine;
 namespace Struikrovers.Core
 {
     /// Royalty, Squire and Bandit pick where to stop. A Bandit may instead click an enemy
-    /// Royalty to preview an abduction. A Squire may click an enemy Squire to fight it on
-    /// the way: that fight is not an action, and a win lets it continue with the steps it
-    /// has left.
+    /// Royalty to preview an abduction.
+    /// A Squire may fight enemy Squires on the way, and that fight is not an action:
+    /// - an enemy Squire it can reach right now: fight it and keep the steps that are left;
+    /// - a tile behind one or more enemy Squires: fight them all, then end on that tile.
     public sealed class ChooseDestinationState : TurnState
     {
         private HashSet<Vector2Int> destinations = new HashSet<Vector2Int>();
         private HashSet<Vector2Int> abductionTargets = new HashSet<Vector2Int>();
         private Dictionary<Vector2Int, int> fightSteps = new Dictionary<Vector2Int, int>();
         private HashSet<Vector2Int> fightTargets = new HashSet<Vector2Int>();
+        private Dictionary<Vector2Int, BlockedPath> blockedPaths = new Dictionary<Vector2Int, BlockedPath>();
+        private HashSet<Vector2Int> blockedTargets = new HashSet<Vector2Int>();
 
         public ChooseDestinationState(TurnManager turn) : base(turn) { }
 
         public override IReadOnlyCollection<Vector2Int> Destinations => destinations;
         public override IReadOnlyCollection<Vector2Int> AbductionTargets => abductionTargets;
-
-        // Enemy Squires that can be fought on the way are highlighted as quick targets (pink).
-        public override IReadOnlyCollection<Vector2Int> QuickActionTargets => fightTargets;
+        public override IReadOnlyCollection<Vector2Int> MoveFightTargets => fightTargets;
+        public override IReadOnlyCollection<Vector2Int> BlockedDestinations => blockedTargets;
 
         public override void Enter()
         {
@@ -32,14 +34,28 @@ namespace Struikrovers.Core
 
             fightSteps = Turn.Movement.GetSquireFightTargets(Pawn, Turn.RolledMovement);
             fightTargets = new HashSet<Vector2Int>(fightSteps.Keys);
+
+            // Tiles behind enemy Squires. The Squires you can fight right now keep their own highlight.
+            blockedPaths = Turn.Movement.GetBlockedSquireDestinations(Pawn, Turn.RolledMovement);
+            foreach (Vector2Int tile in fightSteps.Keys)
+                blockedPaths.Remove(tile);
+
+            blockedTargets = new HashSet<Vector2Int>(blockedPaths.Keys);
         }
 
         public override void OnTileClicked(Vector2Int position)
         {
-            // Fight an enemy Squire that blocks the way.
+            // Fight an enemy Squire that blocks the way, then keep moving.
             if (fightSteps.TryGetValue(position, out int steps))
             {
                 FightWhileMoving(position, steps);
+                return;
+            }
+
+            // Fight through every Squire on the way to a tile behind them.
+            if (blockedPaths.TryGetValue(position, out BlockedPath path))
+            {
+                FightThroughPath(path);
                 return;
             }
 
@@ -87,6 +103,28 @@ namespace Struikrovers.Core
                 Turn.CompleteMovement();
             else
                 Turn.ChangeState(new ChooseDestinationState(Turn));
+        }
+
+        private void FightThroughPath(BlockedPath path)
+        {
+            // Fight the Squires in the order they stand on the route. A loss ends the activation.
+            foreach (Vector2Int tile in path.Blockers)
+            {
+                List<FightResult> fights = Turn.CombatRules.FightSquiresAt(Pawn, tile);
+
+                foreach (FightResult fight in fights)
+                    Turn.Raise(TurnEvent.SquireFight(fight));
+
+                if (!fights.TrueForAll(f => f.AttackerWon))
+                {
+                    Turn.FinishActivation();
+                    return;
+                }
+            }
+
+            // Every blocker is beaten: the Squire ends on the tile it clicked.
+            Pawn.Position = path.Destination;
+            Turn.CompleteMovement();
         }
     }
 }

@@ -132,6 +132,8 @@ namespace Struikrovers.Presentation
                 BuildMarkers(state, viewerTeam, hideEnemyBandits);
 
             HashSet<Vector2Int> destinations = ToSet(step?.Destinations);
+            HashSet<Vector2Int> moveFightTargets = ToSet(step?.MoveFightTargets);
+            HashSet<Vector2Int> blockedTargets = ToSet(step?.BlockedDestinations);
             HashSet<Vector2Int> abductionTargets = ToSet(step?.AbductionTargets);
             HashSet<Vector2Int> attackTargets = ToSet(step?.AttackTargets);
             HashSet<Vector2Int> actionTargets = ToSet(step?.ActionTargets);
@@ -145,6 +147,8 @@ namespace Struikrovers.Presentation
 
                 TileHighlight highlight = TileHighlight.None;
                 if (destinations.Contains(position)) highlight = TileHighlight.Destination;
+                else if (moveFightTargets.Contains(position)) highlight = TileHighlight.MoveFightTarget;
+                else if (blockedTargets.Contains(position)) highlight = TileHighlight.BlockedDestination;
                 else if (abductionTargets.Contains(position)) highlight = TileHighlight.AbductionTarget;
                 else if (attackTargets.Contains(position)) highlight = TileHighlight.AttackTarget;
                 else if (actionTargets.Contains(position)) highlight = TileHighlight.ActionTarget;

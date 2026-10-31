@@ -75,6 +75,8 @@ namespace Struikrovers.Presentation
                 case TileHighlight.AttackTarget: return theme.AttackTargetColor;
                 case TileHighlight.ActionTarget: return actionColor;
                 case TileHighlight.QuickActionTarget: return theme.QuickActionColor;
+                case TileHighlight.MoveFightTarget: return theme.MoveFightColor;
+                case TileHighlight.BlockedDestination: return theme.BlockedDestinationColor;
                 default: return theme.GetTerrainColor(terrain);
             }
         }

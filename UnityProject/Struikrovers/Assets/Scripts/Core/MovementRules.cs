@@ -109,6 +109,105 @@ namespace Struikrovers.Core
             return targets;
         }
 
+        /// Tiles a Squire could reach within 'movement' steps if it fought its way through the enemy
+        /// Squires in the way, with the cheapest route to each (fewest fights, then fewest steps).
+        /// Tiles that are reachable without a fight are not included.
+        public Dictionary<Vector2Int, BlockedPath> GetBlockedSquireDestinations(Pawn squire, int movement)
+        {
+            var result = new Dictionary<Vector2Int, BlockedPath>();
+
+            if (squire == null || squire.Type != PawnType.Squire || movement <= 0)
+                return result;
+
+            int team = squire.Team;
+
+            // Layer s holds the fewest fights needed to stand on a tile after exactly s steps.
+            var fightsByLayer = new List<Dictionary<Vector2Int, int>>
+    {
+        new Dictionary<Vector2Int, int> { [squire.Position] = 0 }
+    };
+            var parentsByLayer = new List<Dictionary<Vector2Int, Vector2Int>>
+    {
+        new Dictionary<Vector2Int, Vector2Int>()
+    };
+
+            var bestFights = new Dictionary<Vector2Int, int>();
+            var bestLayer = new Dictionary<Vector2Int, int>();
+
+            for (int s = 1; s <= movement; s++)
+            {
+                var layer = new Dictionary<Vector2Int, int>();
+                var parents = new Dictionary<Vector2Int, Vector2Int>();
+
+                foreach (var entry in fightsByLayer[s - 1])
+                {
+                    foreach (Vector2Int direction in BoardGrid.Directions)
+                    {
+                        Vector2Int next = entry.Key + direction;
+                        if (!CanWalkerEnter(next))
+                            continue;
+
+                        int fights = entry.Value + (state.HasEnemySquireAt(next, team) ? 1 : 0);
+
+                        if (layer.TryGetValue(next, out int existing) && existing <= fights)
+                            continue;
+
+                        layer[next] = fights;
+                        parents[next] = entry.Key;
+                    }
+                }
+
+                fightsByLayer.Add(layer);
+                parentsByLayer.Add(parents);
+
+                foreach (var entry in layer)
+                {
+                    if (!bestFights.TryGetValue(entry.Key, out int best) || entry.Value < best)
+                    {
+                        bestFights[entry.Key] = entry.Value;
+                        bestLayer[entry.Key] = s;
+                    }
+                }
+            }
+
+            foreach (var entry in bestFights)
+            {
+                Vector2Int tile = entry.Key;
+
+                // No fight needed means it is a normal destination.
+                if (entry.Value == 0 || tile == squire.Position)
+                    continue;
+
+                // The winner has to be able to stand there: no other enemy pawn (such as a Royalty).
+                bool otherEnemy = state.Exists(p =>
+                    !p.AtCastle && p.Team != team && p.Position == tile && p.Type != PawnType.Squire);
+                if (otherEnemy)
+                    continue;
+
+                // Walk the route back from the destination to the start.
+                int steps = bestLayer[tile];
+                var route = new List<Vector2Int>();
+                Vector2Int current = tile;
+
+                for (int s = steps; s > 0; s--)
+                {
+                    route.Add(current);
+                    current = parentsByLayer[s][current];
+                }
+
+                route.Reverse();
+
+                var blockers = new List<Vector2Int>();
+                foreach (Vector2Int p in route)
+                    if (state.HasEnemySquireAt(p, team) && !blockers.Contains(p))
+                        blockers.Add(p);
+
+                result[tile] = new BlockedPath(tile, steps, blockers);
+            }
+
+            return result;
+        }
+
         // Walkers (Royalty, Bloodhound, Squire) only cross grass. An enemy Squire blocks the
         // path of a Squire: its tile can be reached (to fight) but not passed.
         private Dictionary<Vector2Int, int> GetWalkerDistances(Pawn pawn, int movement)

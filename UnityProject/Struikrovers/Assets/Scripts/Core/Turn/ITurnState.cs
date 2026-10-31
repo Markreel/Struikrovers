@@ -31,6 +31,12 @@ namespace Struikrovers.Core
         /// Adjacent tiles for actions without a button (fight a Squire, abduct a Royalty).
         IReadOnlyCollection<Vector2Int> QuickActionTargets { get; }
 
+        /// Enemy Squires that block a Squire's path and can be fought on the way (without using the action).
+        IReadOnlyCollection<Vector2Int> MoveFightTargets { get; }
+
+        /// Tiles a Squire could reach if enemy Squires were not in the way. Clicking one fights its way there.
+        IReadOnlyCollection<Vector2Int> BlockedDestinations { get; }
+
         void Enter();
         void OnTileClicked(Vector2Int position);
         void OnPrimaryButton();

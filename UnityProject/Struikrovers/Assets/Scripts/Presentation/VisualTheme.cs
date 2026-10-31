@@ -41,6 +41,8 @@ namespace Struikrovers.Presentation
         [SerializeField] private Color stabAction = new Color(0.95f, 0.35f, 0.35f);
         [SerializeField] private Color otherAction = new Color(0.55f, 0.75f, 0.95f);
         [SerializeField] private Color quickAction = new Color(0.90f, 0.30f, 0.60f);
+        [SerializeField] private Color blockedDestination = new Color(0.60f, 0.22f, 0.22f);
+
 
         [Header("Frame")]
         [SerializeField] private Color frameFiller = new Color(0.12f, 0.12f, 0.14f);
@@ -62,6 +64,8 @@ namespace Struikrovers.Presentation
         public Color QuickActionColor => quickAction;
         public Color FrameFillerColor => frameFiller;
         public Color TerrainLabelColor => terrainLabel;
+        public Color MoveFightColor => quickAction;
+        public Color BlockedDestinationColor => blockedDestination;
 
         // ---- Actions ----
 

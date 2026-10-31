@@ -24,6 +24,8 @@ namespace Struikrovers.Core
         public virtual string SelectedActionGroup => ActionGroups.Quick;
         public virtual IReadOnlyCollection<Vector2Int> ActionTargets => NoTiles;
         public virtual IReadOnlyCollection<Vector2Int> QuickActionTargets => NoTiles;
+        public virtual IReadOnlyCollection<Vector2Int> MoveFightTargets => NoTiles;
+        public virtual IReadOnlyCollection<Vector2Int> BlockedDestinations => NoTiles;
 
         public virtual void Enter() { }
         public virtual void OnTileClicked(Vector2Int position) { }

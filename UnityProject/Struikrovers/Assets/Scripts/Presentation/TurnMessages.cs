@@ -225,8 +225,11 @@ namespace Struikrovers.Presentation
                         $" | Move up to {turn.RolledMovement} tiles. " +
                         "Orange Royalties can be abducted; yellow tiles are destinations.";
 
-                    if (step.QuickActionTargets.Count > 0)
-                        message += " Pink Squires can be fought on the way (this doesn't use your action).";
+                    if (step.MoveFightTargets.Count > 0)
+                        message += " Pink Squires block your path: click one to fight it and keep moving (this doesn't use your action).";
+
+                    if (step.BlockedDestinations.Count > 0)
+                        message += " Dark red tiles are behind enemy Squires: click one to fight your way there.";
                     break;
 
                 case BloodhoundAttackState _:
