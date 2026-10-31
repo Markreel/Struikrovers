@@ -43,11 +43,9 @@ namespace Struikrovers.Core
 
             Turn.Raise(TurnEvent.Abducted(royalty, Pawn));
 
-            // Running straight home with the captive delivers it.
-            Turn.ResolveDelivery(Pawn);
-
-            // Movement is over; the Bandit can now finish its activation.
-            Turn.ChangeState(new ChooseActionState(Turn));
+            // The Bandit may end on an occupied hiding place (a fight, with the abducting
+            // penalty) or run straight home (delivery). Then the action phase follows.
+            Turn.CompleteMovement();
         }
 
         public override void OnCancel()

@@ -37,9 +37,12 @@ namespace Struikrovers.Presentation
             gameObject.name = $"Tile_{position.x}_{position.y}";
         }
 
-        public void Show(TerrainType terrain, TileHighlight highlight, IReadOnlyList<PawnMarker> markers)
+        /// actionColor is only used for TileHighlight.ActionTarget (it depends on the selected group).
+        public void Show(
+            TerrainType terrain, TileHighlight highlight, Color actionColor,
+            IReadOnlyList<PawnMarker> markers)
         {
-            background.color = GetBackgroundColor(terrain, highlight);
+            background.color = GetBackgroundColor(terrain, highlight, actionColor);
 
             if (glow != null)
             {
@@ -63,13 +66,15 @@ namespace Struikrovers.Presentation
             }
         }
 
-        private Color GetBackgroundColor(TerrainType terrain, TileHighlight highlight)
+        private Color GetBackgroundColor(TerrainType terrain, TileHighlight highlight, Color actionColor)
         {
             switch (highlight)
             {
                 case TileHighlight.Destination: return theme.DestinationColor;
                 case TileHighlight.AbductionTarget: return theme.AbductionTargetColor;
                 case TileHighlight.AttackTarget: return theme.AttackTargetColor;
+                case TileHighlight.ActionTarget: return actionColor;
+                case TileHighlight.QuickActionTarget: return theme.QuickActionColor;
                 default: return theme.GetTerrainColor(terrain);
             }
         }

@@ -37,6 +37,10 @@ namespace Struikrovers.Presentation
         [SerializeField] private Color destination = new Color(0.95f, 0.95f, 0.35f);
         [SerializeField] private Color abductionTarget = new Color(1f, 0.55f, 0.25f);
         [SerializeField] private Color attackTarget = new Color(0.3f, 0.85f, 1f);
+        [SerializeField] private Color gatherAction = new Color(0.75f, 0.95f, 0.60f);
+        [SerializeField] private Color stabAction = new Color(0.95f, 0.35f, 0.35f);
+        [SerializeField] private Color otherAction = new Color(0.55f, 0.75f, 0.95f);
+        [SerializeField] private Color quickAction = new Color(0.90f, 0.30f, 0.60f);
 
         [Header("Frame")]
         [SerializeField] private Color frameFiller = new Color(0.12f, 0.12f, 0.14f);
@@ -55,8 +59,22 @@ namespace Struikrovers.Presentation
         public Color DestinationColor => destination;
         public Color AbductionTargetColor => abductionTarget;
         public Color AttackTargetColor => attackTarget;
+        public Color QuickActionColor => quickAction;
         public Color FrameFillerColor => frameFiller;
         public Color TerrainLabelColor => terrainLabel;
+
+        // ---- Actions ----
+
+        /// Highlight colour of an action group (the one selected on the HUD).
+        public Color GetActionColor(string group)
+        {
+            switch (group)
+            {
+                case ActionGroups.Gather: return gatherAction;
+                case ActionGroups.Stab: return stabAction;
+                default: return otherAction;
+            }
+        }
 
         // ---- Teams ----
 

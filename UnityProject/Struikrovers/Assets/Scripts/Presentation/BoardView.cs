@@ -120,7 +120,8 @@ namespace Struikrovers.Presentation
         }
 
         /// Draws everything. viewerTeam is whose turn it is; with hideEnemyBandits
-        /// on, other teams' Bandits and the captives they carry are not drawn.
+        /// on, other teams' Bandits and the captives they carry are not drawn
+        /// (unless the Bandit is exposed).
         public void Render(GameState state, ITurnState step, int viewerTeam, bool hideEnemyBandits)
         {
             if (tiles.Count == 0)
@@ -133,6 +134,9 @@ namespace Struikrovers.Presentation
             HashSet<Vector2Int> destinations = ToSet(step?.Destinations);
             HashSet<Vector2Int> abductionTargets = ToSet(step?.AbductionTargets);
             HashSet<Vector2Int> attackTargets = ToSet(step?.AttackTargets);
+            HashSet<Vector2Int> actionTargets = ToSet(step?.ActionTargets);
+            HashSet<Vector2Int> quickTargets = ToSet(step?.QuickActionTargets);
+            Color actionColor = Theme.GetActionColor(step?.SelectedActionGroup);
 
             foreach (KeyValuePair<Vector2Int, TileView> entry in tiles)
             {
@@ -143,8 +147,10 @@ namespace Struikrovers.Presentation
                 if (destinations.Contains(position)) highlight = TileHighlight.Destination;
                 else if (abductionTargets.Contains(position)) highlight = TileHighlight.AbductionTarget;
                 else if (attackTargets.Contains(position)) highlight = TileHighlight.AttackTarget;
+                else if (actionTargets.Contains(position)) highlight = TileHighlight.ActionTarget;
+                else if (quickTargets.Contains(position)) highlight = TileHighlight.QuickActionTarget;
 
-                entry.Value.Show(grid.GetTerrain(position), highlight, list);
+                entry.Value.Show(grid.GetTerrain(position), highlight, actionColor, list);
             }
 
             // A castle lights up when it is a legal destination (carrying Bandit only).
@@ -202,8 +208,10 @@ namespace Struikrovers.Presentation
 
         // ---- Rendering helpers ----
 
-        private static bool CanSee(int pawnTeam, int viewerTeam, bool hideEnemyBandits) =>
-            !hideEnemyBandits || pawnTeam == viewerTeam;
+        // A Bandit is visible to its own team, to everyone when hiding is off, and to
+        // everyone while it is exposed (its tree was chopped).
+        private static bool CanSee(Pawn bandit, int viewerTeam, bool hideEnemyBandits) =>
+            !hideEnemyBandits || bandit.Team == viewerTeam || bandit.IsExposed;
 
         // Captives are drawn on their captor's tile as Royalty tokens. A hidden
         // Bandit hides its captives too, since they would give it away.
@@ -228,7 +236,7 @@ namespace Struikrovers.Presentation
                 if (pawn.AtCastle)
                     continue;
 
-                if (pawn.Type == PawnType.Bandit && !CanSee(pawn.Team, viewerTeam, hideEnemyBandits))
+                if (pawn.Type == PawnType.Bandit && !CanSee(pawn, viewerTeam, hideEnemyBandits))
                     continue;
 
                 Add(pawn.Position, new PawnMarker(pawn.Team, pawn.Type, false));
@@ -239,7 +247,7 @@ namespace Struikrovers.Presentation
                 if (bandit.Type != PawnType.Bandit || bandit.AtCastle)
                     continue;
 
-                if (!CanSee(bandit.Team, viewerTeam, hideEnemyBandits))
+                if (!CanSee(bandit, viewerTeam, hideEnemyBandits))
                     continue;
 
                 foreach (Pawn captive in bandit.Captives)

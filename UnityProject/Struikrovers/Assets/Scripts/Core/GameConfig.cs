@@ -5,7 +5,7 @@ namespace Struikrovers.Core
     {
         public const int TeamCount = 4;
 
-        /// The custom "D6" from the GDD: 3-4-4-5-5-6. Also used for the rescue run.
+        /// The custom "D6" from the GDD: 3-4-4-5-5-6. Used for movement and fights.
         public static readonly int[] MovementDie = { 3, 4, 4, 5, 5, 6 };
 
         /// Order in which a team activates its pawns.
@@ -26,5 +26,28 @@ namespace Struikrovers.Core
         /// Wood from a tree / cards from a bush. Plentiful = large tree / loot bush.
         public const int YieldNormal = 1;
         public const int YieldPlentiful = 2;
+
+        // ---- Killing and fighting ----
+
+        /// A Bandit that kills a Squire (chop or loot on its hiding place) takes this much wood.
+        public const int WoodStolenOnSquireKill = 1;
+
+        /// A Squire that wins a fight against another Squire takes this much wood.
+        public const int WoodStolenOnSquireFight = 1;
+
+        /// Added to the roll of the Squire that starts a Squire fight.
+        public const int SquireAttackerBonus = 1;
+
+        /// Added to the roll of a Bandit that starts a fight against another Bandit. 0 = no bonus.
+        public const int BanditAttackerBonus = 0;
+
+        /// Added to the roll of a Bandit that starts a fight against a Squire.
+        public const int BanditAttackerBonusVsSquire = 1;
+
+        /// Added (so use a negative number) to the roll of a Bandit that carries a captive.
+        public const int BanditAbductingModifier = -1;
+
+        /// Safety net so a forced die can never loop forever. After this many ties the defender wins.
+        public const int MaxFightRerolls = 100;
     }
 }

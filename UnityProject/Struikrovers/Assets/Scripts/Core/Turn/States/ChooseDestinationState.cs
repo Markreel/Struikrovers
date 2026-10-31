@@ -40,9 +40,9 @@ namespace Struikrovers.Core
 
             Pawn.Position = position;
 
-            // Stepping onto the castle tile itself delivers the captives.
-            Turn.ResolveDelivery(Pawn);
-            Turn.EndMovement();
+            // Fights (Squire on a Squire, Bandit on an occupied hiding place), delivery at
+            // the castle, and the action phase are handled by the turn manager.
+            Turn.CompleteMovement();
         }
     }
 }

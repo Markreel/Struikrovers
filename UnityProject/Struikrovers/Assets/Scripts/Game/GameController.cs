@@ -4,8 +4,7 @@ using Struikrovers.Presentation;
 
 namespace Struikrovers.Game
 {
-    /// Wires the model, the turn flow and the views together. It replaces
-    /// the old StruikroversBoard component.
+    /// Wires the model, the turn flow and the views together.
     public sealed class GameController : MonoBehaviour
     {
         [Header("Scene")]
@@ -21,6 +20,11 @@ namespace Struikrovers.Game
         [Tooltip("Hide other teams' Bandits and the captives they carry. Also available as a toggle in the HUD.")]
         [SerializeField] private bool hideEnemyBandits = false;
 
+        [Header("Debug")]
+        [Tooltip("1-6 makes every die roll (movement and fights) this number. 0 = normal random die. " +
+                 "Note: with equal modifiers a forced die ties, so fights end by the reroll cap.")]
+        [SerializeField] private int forcedDieResult = 0;
+
         private GameState state;
         private TurnManager turn;
         private string clue = "";
@@ -32,6 +36,7 @@ namespace Struikrovers.Game
             {
                 hud.PrimaryClicked += OnPrimary;
                 hud.CancelClicked += OnCancel;
+                hud.ActionGroupSelected += OnActionGroupSelected;
                 hud.HideBanditsChanged += OnHideBanditsChanged;
             }
             if (input != null) input.PrimaryPressed += OnPrimary;
@@ -44,6 +49,7 @@ namespace Struikrovers.Game
             {
                 hud.PrimaryClicked -= OnPrimary;
                 hud.CancelClicked -= OnCancel;
+                hud.ActionGroupSelected -= OnActionGroupSelected;
                 hud.HideBanditsChanged -= OnHideBanditsChanged;
             }
             if (input != null) input.PrimaryPressed -= OnPrimary;
@@ -84,6 +90,13 @@ namespace Struikrovers.Game
             hud.SetHideBandits(hideEnemyBandits);
 
             turn = new TurnManager(state);
+
+            if (forcedDieResult > 0)
+            {
+                int forced = forcedDieResult;
+                turn.DieRoller = () => forced;
+            }
+
             turn.Changed += Refresh;
             turn.EventRaised += OnTurnEvent;
             turn.Start(); // Raises Changed once, which draws the first frame.
@@ -106,6 +119,7 @@ namespace Struikrovers.Game
         private void OnPositionClicked(Vector2Int position) => turn?.OnTileClicked(position);
         private void OnPrimary() => turn?.OnPrimaryButton();
         private void OnCancel() => turn?.OnCancel();
+        private void OnActionGroupSelected(string group) => turn?.OnActionGroupSelected(group);
 
         private void OnHideBanditsChanged(bool value)
         {
@@ -142,7 +156,9 @@ namespace Struikrovers.Game
                 boardView.Theme.GetStatusBackground(turn.CurrentTeam),
                 TurnMessages.GetPrimaryLabel(step.Primary),
                 step.Primary != PrimaryAction.None,
-                step.CanCancel);
+                step.CanCancel,
+                step.AvailableActionGroups,
+                step.SelectedActionGroup);
         }
     }
 }

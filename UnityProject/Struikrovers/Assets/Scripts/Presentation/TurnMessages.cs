@@ -82,9 +82,84 @@ namespace Struikrovers.Presentation
                     return new TurnMessage(
                         $"Player {e.Actor.Team + 1}'s Royalty escaped and must run to safety.");
 
+                case TurnEventKind.SquireKilled:
+                    {
+                        string clue =
+                            $"The Squire of Player {e.Actor.Team + 1} disturbed a hidden Bandit of " +
+                            $"Player {e.Target.Team + 1} and was killed!" +
+                            (e.Amount > 0 ? $" {e.Amount} wood was stolen." : "");
+                        return new TurnMessage(clue, clue + " Equipment stealing will be added later.");
+                    }
+
+                case TurnEventKind.StabFoundNothing:
+                    {
+                        string clue = "The Squire stabs the hiding place, but finds no Bandit.";
+                        return new TurnMessage(clue, clue);
+                    }
+
+                case TurnEventKind.StabKilled:
+                    {
+                        string clue =
+                            $"The Squire of Player {e.Actor.Team + 1} stabbed a hiding place and killed " +
+                            $"Player {e.Target.Team + 1}'s Bandit!";
+                        return new TurnMessage(clue, clue + " Equipment stealing will be added later.");
+                    }
+
+                case TurnEventKind.StabKilledOwnBandit:
+                    {
+                        string clue =
+                            $"Oops! The Squire of Player {e.Actor.Team + 1} stabbed its own Bandit, " +
+                            "who is sent back to the castle.";
+                        return new TurnMessage(clue, clue);
+                    }
+
+                case TurnEventKind.StabFreedCaptives:
+                    return new TurnMessage($"{e.Amount} captive(s) were freed and must run to safety.");
+
+                case TurnEventKind.BanditExposed:
+                    {
+                        string clue =
+                            $"The tree is gone! Player {e.Actor.Team + 1}'s Bandit is exposed " +
+                            "until it moves away.";
+                        return new TurnMessage(clue, clue);
+                    }
+
+                case TurnEventKind.BanditFight:
+                case TurnEventKind.SquireFight:
+                    {
+                        string text = DescribeFight(e.Fight);
+                        return new TurnMessage(text, text);
+                    }
+
                 default:
                     return new TurnMessage(null);
             }
+        }
+
+        private static string TypeName(Pawn pawn) =>
+    pawn.Type == PawnType.Bandit ? "Bandit" : "Squire";
+
+        private static string DescribeFight(FightResult f)
+        {
+            string rolls = $"{f.AttackerRoll} vs {f.DefenderRoll}" +
+                           (f.Rerolls > 0 ? $", after {f.Rerolls} tie(s)" : "");
+
+            string text =
+                $"A fight broke out at tile ({f.Position.x}, {f.Position.y})! " +
+                $"Player {f.Winner.Team + 1}'s {TypeName(f.Winner)} beat " +
+                $"Player {f.Loser.Team + 1}'s {TypeName(f.Loser)} ({rolls}), " +
+                "and the loser was sent back to its castle.";
+
+            if (f.WoodStolen > 0)
+                text += $" {f.WoodStolen} wood was taken.";
+
+            if (f.CaptivesTakenOver > 0)
+                text += $" The winner took over {f.CaptivesTakenOver} captive(s).";
+
+            if (f.ReleasedCount > 0)
+                text += $" {f.ReleasedCount} captive(s) escaped.";
+
+            return text + " Equipment stealing will be added later.";
         }
 
         public static string GetSniffText(SniffClue clue)
@@ -153,14 +228,21 @@ namespace Struikrovers.Presentation
 
                 case BloodhoundAttackState _:
                     message +=
-                        " | Bloodhound attack: choose a highlighted bush or tree " +
+                        " | Bloodhound attack: choose a highlighted bush, tree or exposed Bandit " +
                         $"within {GameConfig.BloodhoundAttackRange} tiles to attack.";
                     break;
 
                 case ChooseActionState _:
-                    message += pawn.Type == PawnType.Squire
-                        ? " | Action: click an adjacent tree to chop it, or finish."
-                        : " | Action phase: no actions implemented yet. Finish to continue.";
+                    message += " | Action: click a highlighted tile (pink = fight or abduct), or finish.";
+
+                    if (step.AvailableActionGroups.Count > 1)
+                    {
+                        foreach (ActionGroupInfo group in step.AvailableActionGroups)
+                        {
+                            if (group.Id == step.SelectedActionGroup)
+                                message += " Mode: " + group.Label + ".";
+                        }
+                    }
                     break;
 
                 default: // AwaitRollState

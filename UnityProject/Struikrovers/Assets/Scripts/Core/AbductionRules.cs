@@ -46,9 +46,6 @@ namespace Struikrovers.Core
             this.movement = movement;
         }
 
-        /// Plain capture: validates teams, types and carrying capacity.
-        public bool TryAbduct(Pawn royalty, Pawn bandit) => state.TryCapture(royalty, bandit);
-
         /// Action: abduct an enemy Royalty standing next to the Bandit.
         public bool TryAbductAdjacent(Pawn bandit, Vector2Int target, out Pawn royalty)
         {
@@ -68,32 +65,28 @@ namespace Struikrovers.Core
             return true;
         }
 
-        /// A Royalty looting a bush that hides an enemy Bandit gets abducted
-        /// instead of drawing cards. With several Bandits the pick is random for
-        /// now (the GDD says they agree or fight).
-        public bool TryAmbush(Pawn royalty, Vector2Int bush, out Pawn bandit)
+        /// Tiles next to the Bandit that hold an enemy Royalty it could still abduct.
+        public HashSet<Vector2Int> GetAdjacentTargets(Pawn bandit)
         {
-            bandit = null;
+            var targets = new HashSet<Vector2Int>();
 
-            if (royalty == null || royalty.Type != PawnType.Royalty)
-                return false;
+            if (bandit == null || bandit.Type != PawnType.Bandit ||
+                bandit.AtCastle || !state.CanCarryMore(bandit))
+            {
+                return targets;
+            }
 
-            List<Pawn> candidates = state.FindAll(p =>
-                p.Type == PawnType.Bandit &&
-                !p.AtCastle &&
-                p.Position == bush &&
-                p.Team != royalty.Team &&
-                state.CanCarryMore(p));
+            foreach (Pawn pawn in state.Pawns)
+            {
+                if (pawn.Type == PawnType.Royalty && !pawn.AtCastle &&
+                    pawn.Team != bandit.Team &&
+                    BoardGrid.IsAdjacent(bandit.Position, pawn.Position))
+                {
+                    targets.Add(pawn.Position);
+                }
+            }
 
-            if (candidates.Count == 0)
-                return false;
-
-            Pawn chosen = candidates[UnityEngine.Random.Range(0, candidates.Count)];
-            if (!state.TryCapture(royalty, chosen))
-                return false;
-
-            bandit = chosen;
-            return true;
+            return targets;
         }
 
         /// Tiles holding an enemy Royalty that the Bandit can reach with this movement.

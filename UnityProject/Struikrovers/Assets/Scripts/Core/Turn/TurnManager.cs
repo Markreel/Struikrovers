@@ -12,17 +12,20 @@ namespace Struikrovers.Core
             public readonly int Team;
             public readonly int SlotIndex;
             public readonly Pawn Pawn;
+            /// True when the interrupted pawn still has its action to take.
+            public readonly bool ResumeWithAction;
 
-            public ResumePoint(int team, int slotIndex, Pawn pawn)
+            public ResumePoint(int team, int slotIndex, Pawn pawn, bool resumeWithAction)
             {
                 Team = team;
                 SlotIndex = slotIndex;
                 Pawn = pawn;
+                ResumeWithAction = resumeWithAction;
             }
         }
 
         // Rescued Royalty run to safety one by one, then the interrupted
-        // Bloodhound activation resumes from the resume point.
+        // activation resumes from the resume point.
         private readonly Queue<Pawn> pendingRescueRuns = new Queue<Pawn>();
         private ResumePoint? resumePoint;
 
@@ -33,8 +36,10 @@ namespace Struikrovers.Core
         public GameState State { get; }
         public MovementRules Movement { get; }
         public AbductionRules AbductionRules { get; }
+        public RescueRules RescueRules { get; }
         public BloodhoundRules BloodhoundRules { get; }
-        public ForagingRules ForagingRules { get; }
+        public AmbushRules AmbushRules { get; }
+        public CombatRules CombatRules { get; }
 
         public int CurrentTeam { get; private set; }
         public int CurrentSlotIndex { get; private set; }
@@ -48,7 +53,7 @@ namespace Struikrovers.Core
         /// True while a freed Royalty runs to safety: movement only, no action.
         public bool IsRescueRun { get; private set; }
 
-        /// Replace this to force die results while testing.
+        /// Replace this to force die results while testing. Used for movement and fights.
         public Func<int> DieRoller { get; set; }
 
         /// Raised once after each input has been handled, and once from Start().
@@ -62,8 +67,10 @@ namespace Struikrovers.Core
             State = state;
             Movement = new MovementRules(state.Grid);
             AbductionRules = new AbductionRules(state, Movement);
-            BloodhoundRules = new BloodhoundRules(state, Movement);
-            ForagingRules = new ForagingRules(state, AbductionRules);
+            RescueRules = new RescueRules(state, Movement);
+            BloodhoundRules = new BloodhoundRules(state, RescueRules);
+            AmbushRules = new AmbushRules(state);
+            CombatRules = new CombatRules(state, RescueRules, () => DieRoller());
 
             DieRoller = () => GameConfig.MovementDie[
                 UnityEngine.Random.Range(0, GameConfig.MovementDie.Length)];
@@ -105,7 +112,16 @@ namespace Struikrovers.Core
             });
         }
 
-        // ---- Used by the states ----
+        public void OnActionGroupSelected(string group)
+        {
+            Dispatch(() =>
+            {
+                CurrentState?.OnActionGroupSelected(group);
+                MarkChanged();
+            });
+        }
+
+        // ---- Used by the states and actions ----
 
         internal void ChangeState(ITurnState next)
         {
@@ -130,6 +146,54 @@ namespace Struikrovers.Core
                 Raise(TurnEvent.Delivered(bandit, result.Delivered, result.WoodStolen));
         }
 
+        /// The active pawn has chosen where to stop. Fights and delivery are resolved
+        /// here, then the pawn gets its action (or the activation ends).
+        internal void CompleteMovement()
+        {
+            Pawn pawn = ActivePawn;
+
+            if (pawn.Type == PawnType.Squire)
+            {
+                // Moving onto an enemy Squire starts a fight. That fight is the Squire's action.
+                List<FightResult> fights = CombatRules.FightSquiresAt(pawn, pawn.Position);
+                if (fights.Count > 0)
+                {
+                    foreach (FightResult fight in fights)
+                        Raise(TurnEvent.SquireFight(fight));
+
+                    FinishActivation();
+                    return;
+                }
+            }
+            else if (pawn.Type == PawnType.Bandit &&
+                     CombatRules.TryFightOccupant(pawn, out FightResult fight))
+            {
+                // A hiding place holds one Bandit, so the arriving Bandit fights the occupant.
+                Raise(TurnEvent.BanditFight(fight));
+
+                if (fight.Blocked > 0)
+                    Raise(TurnEvent.AttackBlocked(pawn, fight.Blocked));
+
+                bool survived = !pawn.AtCastle;
+
+                if (fight.ReleasedCount > 0)
+                {
+                    // Freed Royalty run to safety first. A surviving Bandit then still gets its action.
+                    BeginRescueRuns(fight.Rescued, survived);
+                    return;
+                }
+
+                if (!survived)
+                {
+                    FinishActivation();
+                    return;
+                }
+            }
+
+            ResolveDelivery(pawn);
+            EndMovement();
+        }
+
         /// Movement is done: a rescue run ends here, every other pawn gets its action.
         internal void EndMovement()
         {
@@ -150,11 +214,11 @@ namespace Struikrovers.Core
             AdvanceToNextPawn();
         }
 
-        /// Called after a successful Bloodhound attack. Each freed Royalty gets a
-        /// movement-only run, then the interrupted activation is finished.
-        internal void BeginRescueRuns(IEnumerable<Pawn> rescued)
+        /// Each freed Royalty gets a movement-only run. Afterwards the interrupted pawn either
+        /// takes its action (resumeWithAction) or its activation ends.
+        internal void BeginRescueRuns(IEnumerable<Pawn> rescued, bool resumeWithAction = false)
         {
-            resumePoint = new ResumePoint(CurrentTeam, CurrentSlotIndex, ActivePawn);
+            resumePoint = new ResumePoint(CurrentTeam, CurrentSlotIndex, ActivePawn, resumeWithAction);
 
             foreach (Pawn royalty in rescued)
                 pendingRescueRuns.Enqueue(royalty);
@@ -180,19 +244,24 @@ namespace Struikrovers.Core
                 return;
             }
 
-            // All freed Royalty have run. Resume the interrupted Bloodhound
-            // activation and finish it, rather than advancing from the last rescuer.
+            // All freed Royalty have run. Resume the interrupted activation,
+            // rather than advancing from the last rescuer.
             IsRescueRun = false;
+            bool resumeWithAction = false;
 
             if (resumePoint.HasValue)
             {
                 CurrentTeam = resumePoint.Value.Team;
                 CurrentSlotIndex = resumePoint.Value.SlotIndex;
                 ActivePawn = resumePoint.Value.Pawn;
+                resumeWithAction = resumePoint.Value.ResumeWithAction;
                 resumePoint = null;
             }
 
-            AdvanceToNextPawn();
+            if (resumeWithAction)
+                ChangeState(new ChooseActionState(this));
+            else
+                AdvanceToNextPawn();
         }
 
         private void AdvanceToNextPawn()

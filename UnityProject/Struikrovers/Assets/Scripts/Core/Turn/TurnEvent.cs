@@ -12,7 +12,15 @@ namespace Struikrovers.Core
         AttackFoundNothing,
         AttackNoCaptives,
         AttackRescued,
-        RescueRunStarted
+        RescueRunStarted,
+        SquireKilled,
+        StabFoundNothing,
+        StabKilled,
+        StabKilledOwnBandit,
+        StabFreedCaptives,
+        BanditExposed,
+        BanditFight,
+        SquireFight
     }
 
     /// Something worth telling the players. Core never builds message text;
@@ -25,6 +33,7 @@ namespace Struikrovers.Core
         public int Amount { get; }
         public int SecondAmount { get; }
         public SniffClue Clue { get; }
+        public FightResult Fight { get; }
 
         private TurnEvent(
             TurnEventKind kind,
@@ -32,7 +41,8 @@ namespace Struikrovers.Core
             Pawn target = null,
             int amount = 0,
             int secondAmount = 0,
-            SniffClue clue = SniffClue.NoCaptive)
+            SniffClue clue = SniffClue.NoCaptive,
+            FightResult fight = default)
         {
             Kind = kind;
             Actor = actor;
@@ -40,6 +50,7 @@ namespace Struikrovers.Core
             Amount = amount;
             SecondAmount = secondAmount;
             Clue = clue;
+            Fight = fight;
         }
 
         /// Actor = the Bandit, Target = the abducted Royalty.
@@ -56,14 +67,14 @@ namespace Struikrovers.Core
         public static TurnEvent Chopped(Pawn squire, int wood) =>
             new TurnEvent(TurnEventKind.Chopped, squire, amount: wood);
 
-        public static TurnEvent Looted(Pawn royalty, int cards) =>
-            new TurnEvent(TurnEventKind.Looted, royalty, amount: cards);
+        public static TurnEvent Looted(Pawn looter, int cards) =>
+            new TurnEvent(TurnEventKind.Looted, looter, amount: cards);
 
         public static TurnEvent AttackInvalidTarget(Pawn bloodhound) =>
             new TurnEvent(TurnEventKind.AttackInvalidTarget, bloodhound);
 
-        public static TurnEvent AttackBlocked(Pawn bloodhound, int blocked) =>
-            new TurnEvent(TurnEventKind.AttackBlocked, bloodhound, amount: blocked);
+        public static TurnEvent AttackBlocked(Pawn attacker, int blocked) =>
+            new TurnEvent(TurnEventKind.AttackBlocked, attacker, amount: blocked);
 
         public static TurnEvent AttackFoundNothing(Pawn bloodhound) =>
             new TurnEvent(TurnEventKind.AttackFoundNothing, bloodhound);
@@ -76,5 +87,32 @@ namespace Struikrovers.Core
 
         public static TurnEvent RescueRunStarted(Pawn royalty) =>
             new TurnEvent(TurnEventKind.RescueRunStarted, royalty);
+
+        /// Actor = the Squire, Target = the Bandit, Amount = wood stolen.
+        public static TurnEvent SquireKilled(Pawn squire, Pawn bandit, int woodStolen) =>
+            new TurnEvent(TurnEventKind.SquireKilled, squire, bandit, woodStolen);
+
+        public static TurnEvent StabFoundNothing(Pawn squire) =>
+            new TurnEvent(TurnEventKind.StabFoundNothing, squire);
+
+        /// Actor = the Squire, Target = the Bandit that died.
+        public static TurnEvent StabKilled(Pawn squire, Pawn bandit) =>
+            new TurnEvent(TurnEventKind.StabKilled, squire, bandit);
+
+        public static TurnEvent StabKilledOwnBandit(Pawn squire) =>
+            new TurnEvent(TurnEventKind.StabKilledOwnBandit, squire);
+
+        public static TurnEvent StabFreedCaptives(Pawn squire, int released) =>
+            new TurnEvent(TurnEventKind.StabFreedCaptives, squire, amount: released);
+
+        /// Actor = the exposed Bandit.
+        public static TurnEvent BanditExposed(Pawn bandit) =>
+            new TurnEvent(TurnEventKind.BanditExposed, bandit);
+
+        public static TurnEvent BanditFight(FightResult fight) =>
+            new TurnEvent(TurnEventKind.BanditFight, fight.Attacker, fight.Defender, fight: fight);
+
+        public static TurnEvent SquireFight(FightResult fight) =>
+            new TurnEvent(TurnEventKind.SquireFight, fight.Attacker, fight.Defender, fight: fight);
     }
 }

@@ -15,7 +15,7 @@ namespace Struikrovers.Core
 
     public readonly struct AttackResult
     {
-        /// Every Bandit found on the attacked tile, including the attacker's own team.
+        /// Bandits found on the attacked tile (0 or 1), including one of the attacker's own team.
         public readonly int BanditsFound;
         /// Royalty pawns that were freed and now stand on the board again.
         public readonly IReadOnlyList<Pawn> Rescued;
@@ -35,16 +35,16 @@ namespace Struikrovers.Core
     public sealed class BloodhoundRules
     {
         private readonly GameState state;
-        private readonly MovementRules movement;
+        private readonly RescueRules rescue;
 
         // Distance at the previous sniff. Only meaningful inside one activation,
         // because BeginActivation overwrites it before the first move.
         private readonly Dictionary<Pawn, int> previousDistances = new Dictionary<Pawn, int>();
 
-        public BloodhoundRules(GameState state, MovementRules movement)
+        public BloodhoundRules(GameState state, RescueRules rescue)
         {
             this.state = state;
-            this.movement = movement;
+            this.rescue = rescue;
         }
 
         /// Call before the Bloodhound's first move, so the first sniff can compare
@@ -88,7 +88,8 @@ namespace Struikrovers.Core
             return clue;
         }
 
-        /// Bushes and trees within attack range (straight-line tile distance).
+        /// Bushes and trees within attack range (straight-line tile distance), plus
+        /// stumps where a Bandit stands exposed.
         public HashSet<Vector2Int> GetAttackTargets(Pawn bloodhound)
         {
             var targets = new HashSet<Vector2Int>();
@@ -107,7 +108,7 @@ namespace Struikrovers.Core
                     if (BoardGrid.Manhattan(position, bloodhound.Position) > GameConfig.BloodhoundAttackRange)
                         continue;
 
-                    if (movement.CanBanditEnd(position))
+                    if (state.IsAttackable(position))
                         targets.Add(position);
                 }
             }
@@ -115,53 +116,19 @@ namespace Struikrovers.Core
             return targets;
         }
 
-        /// Attacks a hiding place. Every enemy Bandit there releases its captives and
-        /// goes back to its castle. The attacker's own team's Bandits are unaffected.
+        /// Attacks a hiding place. An enemy Bandit there releases its captives and
+        /// goes back to its castle. The attacker's own team's Bandit is unaffected.
         public AttackResult ResolveAttack(Pawn bloodhound, Vector2Int target)
         {
-            List<Pawn> banditsFound = state.FindAll(p =>
-                p.Type == PawnType.Bandit && !p.AtCastle && p.Position == target);
+            Pawn bandit = state.GetBanditAt(target);
 
             var rescued = new List<Pawn>();
-            var reserved = new HashSet<Vector2Int>();
             int blocked = 0;
 
-            foreach (Pawn bandit in banditsFound)
-            {
-                if (bandit.Team == bloodhound.Team || !bandit.IsCarrying)
-                    continue;
+            if (bandit != null && bandit.Team != bloodhound.Team && bandit.IsCarrying)
+                blocked = rescue.ReleaseCaptives(bandit, target, new HashSet<Vector2Int>(), rescued);
 
-                // Copy: freeing a captive changes bandit.Captives.
-                foreach (Pawn royalty in new List<Pawn>(bandit.Captives))
-                {
-                    if (!TryFindFreeTile(target, reserved, out Vector2Int tile))
-                    {
-                        // Leave the captive intact if there is nowhere legal to place the Royalty.
-                        blocked++;
-                        continue;
-                    }
-
-                    state.FreeCaptive(bandit, royalty, tile);
-                    reserved.Add(tile);
-                    rescued.Add(royalty);
-                }
-
-                // A Bandit that lost all its captives returns to its own castle.
-                if (!bandit.IsCarrying)
-                    state.SendToCastle(bandit);
-            }
-
-            return new AttackResult(banditsFound.Count, rescued, blocked);
-        }
-
-        private bool TryFindFreeTile(Vector2Int origin, HashSet<Vector2Int> reserved, out Vector2Int tile)
-        {
-            return movement.Pathfinder.TryFindNearest(
-                origin,
-                p => state.Grid.GetTerrain(p) == TerrainType.Grass &&
-                     !reserved.Contains(p) &&
-                     !state.IsOccupied(p),
-                out tile);
+            return new AttackResult(bandit != null ? 1 : 0, rescued, blocked);
         }
     }
 }
