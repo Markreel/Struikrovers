@@ -102,7 +102,21 @@ namespace Struikrovers.Core
             return targets;
         }
 
-        /// Tiles holding an enemy Royalty that the Bandit can reach with this movement.
+        /// Where the Bandit could end up after abducting the Royalty on this tile, given the steps
+        /// that are left once it has reached the Royalty. Empty when there is no legal ending tile
+        /// (no bush, tree or own castle within the remaining steps).
+        private HashSet<Vector2Int> GetPostAbductionDestinations(
+            Pawn bandit, Vector2Int royaltyPosition, int stepsToRoyalty, int movementSteps)
+        {
+            int remaining = movementSteps - stepsToRoyalty;
+
+            // The Bandit will be carrying a captive, so its own castle is a destination.
+            return movement.GetBanditDestinations(
+                royaltyPosition, remaining, bandit.Team, carrying: true);
+        }
+
+        /// Tiles holding an enemy Royalty that the Bandit can reach with this movement AND from
+        /// which it can still reach a bush, tree or its own castle with the steps that are left.
         public HashSet<Vector2Int> GetTargets(Pawn bandit, int movementSteps)
         {
             var targets = new HashSet<Vector2Int>();
@@ -118,18 +132,24 @@ namespace Struikrovers.Core
                 if (pawn.Type != PawnType.Royalty || pawn.AtCastle || pawn.Team == bandit.Team)
                     continue;
 
-                if (distances.TryGetValue(pawn.Position, out int steps) &&
-                    steps > 0 && steps <= movementSteps)
+                if (!distances.TryGetValue(pawn.Position, out int steps) ||
+                    steps <= 0 || steps > movementSteps)
                 {
-                    targets.Add(pawn.Position);
+                    continue;
                 }
+
+                if (GetPostAbductionDestinations(bandit, pawn.Position, steps, movementSteps).Count == 0)
+                    continue;
+
+                targets.Add(pawn.Position);
             }
 
             return targets;
         }
 
-        /// Previews an abduction by moving over a Royalty. Leaving the castle is
-        /// already part of the step count because the castle is a normal tile.
+        /// Previews an abduction by moving over a Royalty. Leaving the castle is already part of
+        /// the step count because the castle is a normal tile. Fails when there is no legal
+        /// ending tile afterwards.
         public bool TryPlan(Pawn bandit, Vector2Int royaltyPosition, int movementSteps,
                             out AbductionPlan plan)
         {
@@ -145,13 +165,13 @@ namespace Struikrovers.Core
             if (!distances.TryGetValue(royalty.Position, out int steps))
                 return false;
 
-            int remaining = movementSteps - steps;
+            HashSet<Vector2Int> destinations =
+                GetPostAbductionDestinations(bandit, royalty.Position, steps, movementSteps);
 
-            // The Bandit will be carrying a captive, so its own castle is a destination.
-            HashSet<Vector2Int> destinations = movement.GetBanditDestinations(
-                royalty.Position, remaining, bandit.Team, carrying: true);
+            if (destinations.Count == 0)
+                return false;
 
-            plan = new AbductionPlan(royalty, steps, remaining, destinations);
+            plan = new AbductionPlan(royalty, steps, movementSteps - steps, destinations);
             return true;
         }
 

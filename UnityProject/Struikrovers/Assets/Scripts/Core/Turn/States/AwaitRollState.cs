@@ -29,6 +29,18 @@ namespace Struikrovers.Core
 
                 default:
                     Turn.RolledMovement = Turn.RollMovementDie();
+
+                    // A freed Royalty that is boxed in on its hiding place cannot run.
+                    // It is placed on the nearest free grass tile instead.
+                    if (Turn.IsRescueRun && Pawn.Type == PawnType.Royalty &&
+                        Turn.Movement.GetDestinations(Pawn, Turn.RolledMovement).Count == 0)
+                    {
+                        Turn.RescueRules.PlaceNearest(Pawn);
+                        Turn.Raise(TurnEvent.RescueRunBlocked(Pawn));
+                        Turn.EndMovement(); // a rescue run has no action, so this ends the run
+                        break;
+                    }
+
                     Turn.ChangeState(new ChooseDestinationState(Turn));
                     break;
             }

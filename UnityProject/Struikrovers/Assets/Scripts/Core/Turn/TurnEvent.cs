@@ -20,7 +20,8 @@ namespace Struikrovers.Core
         StabFreedCaptives,
         BanditExposed,
         BanditFight,
-        SquireFight
+        SquireFight,
+        RescueRunBlocked
     }
 
     /// Something worth telling the players. Core never builds message text;
@@ -114,5 +115,9 @@ namespace Struikrovers.Core
 
         public static TurnEvent SquireFight(FightResult fight) =>
             new TurnEvent(TurnEventKind.SquireFight, fight.Attacker, fight.Defender, fight: fight);
+
+        /// Actor = the freed Royalty that could not run and was placed on the nearest free tile.
+        public static TurnEvent RescueRunBlocked(Pawn royalty) =>
+            new TurnEvent(TurnEventKind.RescueRunBlocked, royalty);
     }
 }

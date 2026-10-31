@@ -4,7 +4,8 @@ using UnityEngine;
 namespace Struikrovers.Core
 {
     /// Frees the Royalty a Bandit carries. Used by the Bloodhound attack, by stabbing
-    /// and by lost Bandit fights.
+    /// and by lost fights. A freed Royalty starts on the tile it was freed on (the hiding
+    /// place) and runs to safety from there (see AwaitRollState).
     public sealed class RescueRules
     {
         private readonly GameState state;
@@ -16,43 +17,38 @@ namespace Struikrovers.Core
             this.movement = movement;
         }
 
-        /// Frees every captive onto the nearest free grass tile around origin and
-        /// returns how many could not be placed. A Bandit left empty-handed goes
-        /// back to its own castle.
+        /// Frees every captive onto 'origin' (the tile of its captor). Returns how many could
+        /// not be freed, which is always 0 now. 'reserved' is no longer used and only kept so
+        /// existing callers keep working. A Bandit left empty-handed goes back to its castle.
         public int ReleaseCaptives(
             Pawn bandit, Vector2Int origin, HashSet<Vector2Int> reserved, List<Pawn> rescued)
         {
-            int blocked = 0;
-
             // Copy: freeing a captive changes bandit.Captives.
             foreach (Pawn royalty in new List<Pawn>(bandit.Captives))
             {
-                if (!TryFindFreeTile(origin, reserved, out Vector2Int tile))
-                {
-                    // Leave the captive intact if there is nowhere legal to place the Royalty.
-                    blocked++;
-                    continue;
-                }
-
-                state.FreeCaptive(bandit, royalty, tile);
-                reserved.Add(tile);
+                state.FreeCaptive(bandit, royalty, origin);
                 rescued.Add(royalty);
             }
 
             if (!bandit.IsCarrying)
                 state.SendToCastle(bandit);
 
-            return blocked;
+            return 0;
         }
 
-        private bool TryFindFreeTile(Vector2Int origin, HashSet<Vector2Int> reserved, out Vector2Int tile)
+        /// Fallback for a Royalty that cannot run: moves it to the nearest free grass tile.
+        public bool PlaceNearest(Pawn royalty)
         {
-            return movement.Pathfinder.TryFindNearest(
-                origin,
+            bool found = movement.Pathfinder.TryFindNearest(
+                royalty.Position,
                 p => state.Grid.GetTerrain(p) == TerrainType.Grass &&
-                     !reserved.Contains(p) &&
-                     !state.IsOccupied(p),
-                out tile);
+                     !state.HasEnemyPawnAt(p, royalty.Team),
+                out Vector2Int tile);
+
+            if (found)
+                royalty.Position = tile;
+
+            return found;
         }
     }
 }

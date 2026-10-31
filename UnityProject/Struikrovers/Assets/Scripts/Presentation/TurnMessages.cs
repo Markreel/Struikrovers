@@ -80,7 +80,15 @@ namespace Struikrovers.Presentation
 
                 case TurnEventKind.RescueRunStarted:
                     return new TurnMessage(
-                        $"Player {e.Actor.Team + 1}'s Royalty escaped and must run to safety.");
+                        $"Player {e.Actor.Team + 1}'s Royalty is free! Roll to run out of the hiding place.");
+
+                case TurnEventKind.RescueRunBlocked:
+                    {
+                        string clue =
+                            $"Player {e.Actor.Team + 1}'s Royalty had no way out of the hiding place " +
+                            "and was carried to the nearest free tile.";
+                        return new TurnMessage(clue, clue);
+                    }
 
                 case TurnEventKind.SquireKilled:
                     {
