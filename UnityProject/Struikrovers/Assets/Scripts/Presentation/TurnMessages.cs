@@ -224,6 +224,9 @@ namespace Struikrovers.Presentation
                     message +=
                         $" | Move up to {turn.RolledMovement} tiles. " +
                         "Orange Royalties can be abducted; yellow tiles are destinations.";
+
+                    if (step.QuickActionTargets.Count > 0)
+                        message += " Pink Squires can be fought on the way (this doesn't use your action).";
                     break;
 
                 case BloodhoundAttackState _:

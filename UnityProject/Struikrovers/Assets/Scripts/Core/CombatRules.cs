@@ -88,15 +88,14 @@ namespace Struikrovers.Core
 
         private static bool CanFightSquires(Pawn pawn) =>
             pawn != null &&
-            (pawn.Type == PawnType.Squire || pawn.Type == PawnType.Bandit) &&
-            !pawn.AtCastle;
+            (pawn.Type == PawnType.Squire || pawn.Type == PawnType.Bandit);
 
         /// Tiles next to this Squire or Bandit that hold an enemy Squire.
         public HashSet<Vector2Int> GetSquireTargets(Pawn attacker)
         {
             var targets = new HashSet<Vector2Int>();
 
-            if (!CanFightSquires(attacker))
+            if (!CanFightSquires(attacker) || attacker.AtCastle)
                 return targets;
 
             foreach (Pawn pawn in state.Pawns)
@@ -126,10 +125,11 @@ namespace Struikrovers.Core
 
             foreach (Pawn opponent in opponents)
             {
-                results.Add(FightSquires(attacker, opponent));
+                FightResult result = FightSquires(attacker, opponent);
+                results.Add(result);
 
                 // The attacker lost and is back in its castle.
-                if (attacker.AtCastle)
+                if (!result.AttackerWon)
                     break;
             }
 

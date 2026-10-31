@@ -38,6 +38,19 @@ namespace Struikrovers.Core
                 return;
 
             Pawn royalty = Plan.Royalty;
+
+            // Enemy Squires on the Royalty's tile guard it. The Bandit has to beat them first;
+            // losing sends it to its castle and ends the activation.
+            if (!Turn.FightGuards(Pawn, royalty.Position, out List<Pawn> rescued))
+            {
+                if (rescued.Count > 0)
+                    Turn.BeginRescueRuns(rescued, false);
+                else
+                    Turn.FinishActivation();
+
+                return;
+            }
+
             if (!Turn.AbductionRules.CommitPlan(Pawn, Plan, position))
                 return;
 

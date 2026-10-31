@@ -11,11 +11,14 @@ namespace Struikrovers.Core
 
         public Pathfinder(BoardGrid grid) { this.grid = grid; }
 
-        /// Step distance from start to every tile that can be reached within
-        /// maxSteps. startCost lets a pawn leaving its castle pay 1 step up front.
+        /// Step distance from start to every tile that can be reached within maxSteps.
+        /// canEnter decides which tiles may be entered (it must check bounds itself, because
+        /// castles lie outside the map). A tile for which blocksFurther is true can be
+        /// reached, but the search does not continue through it.
         public Dictionary<Vector2Int, int> GetDistances(
             Vector2Int start, int maxSteps,
-            Func<Vector2Int, bool> canEnter, int startCost = 0)
+            Func<Vector2Int, bool> canEnter, int startCost = 0,
+            Func<Vector2Int, bool> blocksFurther = null)
         {
             var distance = new Dictionary<Vector2Int, int> { [start] = startCost };
             var queue = new Queue<Vector2Int>();
@@ -27,6 +30,9 @@ namespace Struikrovers.Core
                 int currentDistance = distance[current];
 
                 if (currentDistance >= maxSteps)
+                    continue;
+
+                if (blocksFurther != null && current != start && blocksFurther(current))
                     continue;
 
                 foreach (Vector2Int direction in BoardGrid.Directions)

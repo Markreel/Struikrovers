@@ -16,7 +16,7 @@ namespace Struikrovers.Core
 
         public ActionOutcome Execute(ActionContext ctx, Vector2Int target)
         {
-            if (!ctx.IsAdjacent(target))
+            if (ctx.Actor.AtCastle || !ctx.IsAdjacent(target))
                 return ActionOutcome.NotPerformed;
 
             List<FightResult> fights = ctx.Turn.CombatRules.FightSquiresAt(ctx.Actor, target);

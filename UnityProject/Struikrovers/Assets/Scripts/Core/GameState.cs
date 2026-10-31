@@ -83,6 +83,16 @@ namespace Struikrovers.Core
         public bool IsOccupied(Vector2Int position) =>
             pawns.Exists(p => !p.AtCastle && p.Position == position);
 
+        /// True when a pawn of another team stands on this board tile.
+        public bool HasEnemyPawnAt(Vector2Int position, int team) =>
+            pawns.Exists(p => !p.AtCastle && p.Team != team && p.Position == position);
+
+        /// True when a Squire of another team stands on this board tile.
+        public bool HasEnemySquireAt(Vector2Int position, int team) =>
+            pawns.Exists(p =>
+                p.Type == PawnType.Squire && !p.AtCastle &&
+                p.Team != team && p.Position == position);
+
         /// The Bandit carrying this captive, or null.
         public Pawn GetCaptor(Pawn captive) =>
             pawns.Find(p => p.Type == PawnType.Bandit && p.HoldsCaptive(captive));

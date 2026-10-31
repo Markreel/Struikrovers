@@ -65,7 +65,7 @@ namespace Struikrovers.Core
         public TurnManager(GameState state)
         {
             State = state;
-            Movement = new MovementRules(state.Grid);
+            Movement = new MovementRules(state);
             AbductionRules = new AbductionRules(state, Movement);
             RescueRules = new RescueRules(state, Movement);
             BloodhoundRules = new BloodhoundRules(state, RescueRules);
@@ -146,27 +146,38 @@ namespace Struikrovers.Core
                 Raise(TurnEvent.Delivered(bandit, result.Delivered, result.WoodStolen));
         }
 
+        /// A Royalty guarded by enemy Squires can only be abducted after the Bandit beats them.
+        /// Returns true when the Bandit survived (or nothing guarded the tile). When it lost,
+        /// 'rescued' holds Royalty it was carrying that were freed and need a rescue run.
+        internal bool FightGuards(Pawn bandit, Vector2Int tile, out List<Pawn> rescued)
+        {
+            rescued = new List<Pawn>();
+            List<FightResult> fights = CombatRules.FightSquiresAt(bandit, tile);
+            int blocked = 0;
+
+            foreach (FightResult fight in fights)
+            {
+                Raise(TurnEvent.SquireFight(fight));
+                blocked += fight.Blocked;
+
+                if (fight.Rescued != null)
+                    rescued.AddRange(fight.Rescued);
+            }
+
+            if (blocked > 0)
+                Raise(TurnEvent.AttackBlocked(bandit, blocked));
+
+            return fights.TrueForAll(f => f.AttackerWon);
+        }
+
         /// The active pawn has chosen where to stop. Fights and delivery are resolved
         /// here, then the pawn gets its action (or the activation ends).
         internal void CompleteMovement()
         {
             Pawn pawn = ActivePawn;
 
-            if (pawn.Type == PawnType.Squire)
-            {
-                // Moving onto an enemy Squire starts a fight. That fight is the Squire's action.
-                List<FightResult> fights = CombatRules.FightSquiresAt(pawn, pawn.Position);
-                if (fights.Count > 0)
-                {
-                    foreach (FightResult fight in fights)
-                        Raise(TurnEvent.SquireFight(fight));
-
-                    FinishActivation();
-                    return;
-                }
-            }
-            else if (pawn.Type == PawnType.Bandit &&
-                     CombatRules.TryFightOccupant(pawn, out FightResult fight))
+            if (pawn.Type == PawnType.Bandit &&
+                CombatRules.TryFightOccupant(pawn, out FightResult fight))
             {
                 // A hiding place holds one Bandit, so the arriving Bandit fights the occupant.
                 Raise(TurnEvent.BanditFight(fight));

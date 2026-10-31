@@ -65,6 +65,19 @@ namespace Struikrovers.Core
             return true;
         }
 
+        /// True when the Bandit could abduct the Royalty on this adjacent tile right now.
+        public bool CanAbductAdjacent(Pawn bandit, Vector2Int target)
+        {
+            if (bandit == null || bandit.Type != PawnType.Bandit || bandit.AtCastle)
+                return false;
+
+            if (!BoardGrid.IsAdjacent(bandit.Position, target))
+                return false;
+
+            Pawn candidate = state.GetRoyaltyAt(target);
+            return candidate != null && candidate.Team != bandit.Team && state.CanCarryMore(bandit);
+        }
+
         /// Tiles next to the Bandit that hold an enemy Royalty it could still abduct.
         public HashSet<Vector2Int> GetAdjacentTargets(Pawn bandit)
         {
