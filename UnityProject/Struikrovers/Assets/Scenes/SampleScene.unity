@@ -354,7 +354,7 @@ GameObject:
   - component: {fileID: 806243427}
   - component: {fileID: 806243431}
   m_Layer: 5
-  m_Name: BoardView
+  m_Name: BoardView (CANVAS)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -438,6 +438,7 @@ RectTransform:
   m_Children:
   - {fileID: 2072903485}
   - {fileID: 1037306181}
+  - {fileID: 1160733893}
   m_Father: {fileID: 2098490523}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
@@ -542,6 +543,22 @@ MonoBehaviour:
   m_ChildScaleWidth: 0
   m_ChildScaleHeight: 0
   m_ReverseArrangement: 0
+--- !u!224 &1160733893 stripped
+RectTransform:
+  m_CorrespondingSourceObject: {fileID: 76974443884343035, guid: 8d83b4093652540408dfef5864e60f71, type: 3}
+  m_PrefabInstance: {fileID: 2510620928247595995}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &1160733894 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 6536422524692777177, guid: 8d83b4093652540408dfef5864e60f71, type: 3}
+  m_PrefabInstance: {fileID: 2510620928247595995}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9ac9f047106681a48a56301aee9b2780, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Struikrovers.Presentation::Struikrovers.Presentation.PromptView
 --- !u!1 &1222884660
 GameObject:
   m_ObjectHideFlags: 0
@@ -650,8 +667,20 @@ MonoBehaviour:
   m_EditorClassIdentifier: Struikrovers.Game::Struikrovers.Game.GameController
   boardView: {fileID: 806243431}
   hud: {fileID: 1037306182}
+  promptView: {fileID: 1160733894}
   input: {fileID: 1310390996}
   mapFileName: default-map.json
+  deckSettings:
+    handCardCopies: 3
+    equipmentCopies: 1
+    curseCopies: 1
+    overrides: []
+    maxHandSize: 5
+    dragonBottomCount: 10
+    endOfTurnDraws: 1
+    seed: 0
+    topCards: []
+  showCardDebugText: 1
   hideEnemyBandits: 0
   forcedDieResult: 0
 --- !u!4 &1310390998
@@ -990,6 +1019,103 @@ PrefabInstance:
       addedObject: {fileID: 1089002445}
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 670f11561411c4947b2a3a4b5dfb3e8d, type: 3}
+--- !u!1001 &2510620928247595995
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 806243430}
+    m_Modifications:
+    - target: {fileID: 76974443884343035, guid: 8d83b4093652540408dfef5864e60f71, type: 3}
+      propertyPath: m_Pivot.x
+      value: 0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 76974443884343035, guid: 8d83b4093652540408dfef5864e60f71, type: 3}
+      propertyPath: m_Pivot.y
+      value: 0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 76974443884343035, guid: 8d83b4093652540408dfef5864e60f71, type: 3}
+      propertyPath: m_AnchorMax.x
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 76974443884343035, guid: 8d83b4093652540408dfef5864e60f71, type: 3}
+      propertyPath: m_AnchorMax.y
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 76974443884343035, guid: 8d83b4093652540408dfef5864e60f71, type: 3}
+      propertyPath: m_AnchorMin.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 76974443884343035, guid: 8d83b4093652540408dfef5864e60f71, type: 3}
+      propertyPath: m_AnchorMin.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 76974443884343035, guid: 8d83b4093652540408dfef5864e60f71, type: 3}
+      propertyPath: m_SizeDelta.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 76974443884343035, guid: 8d83b4093652540408dfef5864e60f71, type: 3}
+      propertyPath: m_SizeDelta.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 76974443884343035, guid: 8d83b4093652540408dfef5864e60f71, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 76974443884343035, guid: 8d83b4093652540408dfef5864e60f71, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 76974443884343035, guid: 8d83b4093652540408dfef5864e60f71, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 76974443884343035, guid: 8d83b4093652540408dfef5864e60f71, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 76974443884343035, guid: 8d83b4093652540408dfef5864e60f71, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 76974443884343035, guid: 8d83b4093652540408dfef5864e60f71, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 76974443884343035, guid: 8d83b4093652540408dfef5864e60f71, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 76974443884343035, guid: 8d83b4093652540408dfef5864e60f71, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 76974443884343035, guid: 8d83b4093652540408dfef5864e60f71, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 76974443884343035, guid: 8d83b4093652540408dfef5864e60f71, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 76974443884343035, guid: 8d83b4093652540408dfef5864e60f71, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 76974443884343035, guid: 8d83b4093652540408dfef5864e60f71, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4568527022182855868, guid: 8d83b4093652540408dfef5864e60f71, type: 3}
+      propertyPath: m_Name
+      value: PromptLayer
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 8d83b4093652540408dfef5864e60f71, type: 3}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

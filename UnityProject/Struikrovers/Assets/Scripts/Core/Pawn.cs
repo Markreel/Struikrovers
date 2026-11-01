@@ -1,4 +1,3 @@
-using System.Buffers;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -14,8 +13,14 @@ namespace Struikrovers.Core
 
         public int Team { get; }
 
-        /// Only GameState changes this (abduct / free / deliver).
+        /// What this pawn currently is. A Royalty becomes a Bloodhound while abducted.
         public PawnType Type { get; internal set; }
+
+        /// What this pawn was created as. Never changes (Royalty stays Royalty).
+        public PawnType BaseType { get; }
+
+        /// Equipment belongs to the pawn, whatever it currently is.
+        public PawnEquipment Equipment { get; } = new PawnEquipment();
 
         /// Moving a pawn always ends its exposure.
         public Vector2Int Position
@@ -53,6 +58,7 @@ namespace Struikrovers.Core
             this.grid = grid;
             Team = team;
             Type = type;
+            BaseType = type;
             this.position = position;
         }
 

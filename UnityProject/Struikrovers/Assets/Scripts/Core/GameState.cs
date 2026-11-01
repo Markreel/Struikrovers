@@ -47,6 +47,10 @@ namespace Struikrovers.Core
         public Pawn GetPawn(int team, PawnType type) =>
             pawns.Find(p => p.Team == team && p.Type == type);
 
+        /// The team's pawn of this role (Royalty, Squire, Bandit), even while the Royalty is a Bloodhound.
+        public Pawn GetPawnByRole(int team, PawnType role) =>
+            pawns.Find(p => p.Team == team && p.BaseType == role);
+
         /// The pawn that acts in a turn slot. The Royalty slot falls back to the
         /// Bloodhound while the Royalty is abducted.
         public Pawn GetPawnForSlot(int team, PawnType slot)

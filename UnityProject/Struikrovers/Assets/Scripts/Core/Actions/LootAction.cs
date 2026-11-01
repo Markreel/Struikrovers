@@ -7,6 +7,7 @@ namespace Struikrovers.Core
     /// (a Royalty is abducted, a Squire is killed).
     /// With fullPlentifulYield (Royalty) a plentiful bush gives 2 cards and becomes a normal
     /// bush. Without it (Squire) a plentiful bush gives 1 card and stays plentiful.
+    /// The cards are drawn from the draw pile and resolved before the activation ends.
     public sealed class LootAction : IPawnAction
     {
         private readonly bool fullPlentifulYield;
@@ -41,15 +42,16 @@ namespace Struikrovers.Core
                 return ActionOutcome.Performed;
 
             bool takesFullYield = terrain.IsPlentiful() && fullPlentifulYield;
-
             int cards = takesFullYield ? GameConfig.YieldPlentiful : GameConfig.YieldNormal;
-            ctx.State.Teams[ctx.Actor.Team].Cards += cards;
 
             // Only a full-yield loot uses up the plentiful bush.
             if (takesFullYield)
                 ctx.Grid.SetTerrain(target, TerrainType.Bush);
 
             ctx.Raise(TurnEvent.Looted(ctx.Actor, cards));
+
+            // The cards are resolved (hand full? equip?) before the turn moves on.
+            ctx.Turn.Cards.QueueDraw(ctx.Actor.Team, cards);
             return ActionOutcome.Performed;
         }
     }

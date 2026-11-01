@@ -42,5 +42,9 @@ namespace Struikrovers.Core
         void OnPrimaryButton();
         void OnCancel();
         void OnActionGroupSelected(string group);
+
+        /// A decision the player has to make before the game continues (hand full, equip a card...).
+        DecisionPrompt Prompt { get; }
+        void OnPromptChosen(int index);
     }
 }

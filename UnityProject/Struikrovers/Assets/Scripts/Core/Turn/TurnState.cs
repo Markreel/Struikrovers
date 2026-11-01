@@ -32,5 +32,7 @@ namespace Struikrovers.Core
         public virtual void OnPrimaryButton() { }
         public virtual void OnCancel() { }
         public virtual void OnActionGroupSelected(string group) { }
+        public virtual DecisionPrompt Prompt => null;
+        public virtual void OnPromptChosen(int index) { }
     }
 }

@@ -138,6 +138,29 @@ namespace Struikrovers.Presentation
                         string text = DescribeFight(e.Fight);
                         return new TurnMessage(text, text);
                     }
+                case TurnEventKind.CardDrawn:
+                    return new TurnMessage(null, $"Player {e.Team + 1} drew a card.");
+
+                case TurnEventKind.CardDiscarded:
+                    {
+                        string clue = $"Player {e.Team + 1} discarded {e.Card.Name}.";
+                        return new TurnMessage(clue, clue);
+                    }
+
+                case TurnEventKind.CardEquipped:
+                    {
+                        string clue = $"Player {e.Team + 1} equipped {e.Card.Name} on their {e.Actor.BaseType}.";
+                        return new TurnMessage(clue, clue);
+                    }
+
+                case TurnEventKind.DragonAwakes:
+                    {
+                        string clue = "THE DRAGON AWAKES! (The dragon phase isn't built yet, so the game continues.)";
+                        return new TurnMessage(clue, clue);
+                    }
+
+                case TurnEventKind.DeckEmpty:
+                    return new TurnMessage("The draw pile is empty.", "The draw pile is empty.");
 
                 default:
                     return new TurnMessage(null);
@@ -259,6 +282,10 @@ namespace Struikrovers.Presentation
                     }
                     break;
 
+                case PromptState _:
+                    message += " | Make a choice in the panel.";
+                    break;
+
                 default: // AwaitRollState
                     message += pawn.Type == PawnType.Bandit
                         ? $" | Move up to {GameConfig.BanditMoveSteps} tiles."
@@ -270,6 +297,33 @@ namespace Struikrovers.Presentation
                 message += "\n" + clue;
 
             return message;
+        }
+
+        /// Hand and equipment of one team as text. Temporary, until the player panels exist.
+        public static string BuildCardSummary(GameState state, int team)
+        {
+            TeamState stats = state.Teams[team];
+
+            string hand = "";
+            foreach (CardDefinition card in stats.Hand)
+                hand += (hand.Length > 0 ? ", " : "") + card.Name;
+
+            string text = "Hand (" + stats.Hand.Count + "): " + (hand.Length > 0 ? hand : "empty");
+
+            foreach (PawnType role in GameConfig.TurnOrder)
+            {
+                Pawn pawn = state.GetPawnByRole(team, role);
+                if (pawn == null)
+                    continue;
+
+                string items = "";
+                foreach (CardDefinition item in pawn.Equipment.Items)
+                    items += (items.Length > 0 ? ", " : "") + item.Name + " (" + item.Modifier.ToString("+0;-0;0") + ")";
+
+                text += "  |  " + role + ": " + (items.Length > 0 ? items : "-");
+            }
+
+            return text;
         }
     }
 }

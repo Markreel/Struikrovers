@@ -10,11 +10,17 @@ namespace Struikrovers.Game
         [Header("Scene")]
         [SerializeField] private BoardView boardView;
         [SerializeField] private HudView hud;
+        [SerializeField] private PromptView promptView;
         [SerializeField] private InputHandler input;
 
         [Header("Map")]
         [Tooltip("Select a JSON map from Assets/StreamingAssets/Maps using the Inspector dropdown.")]
         [SerializeField] private string mapFileName = "default-map.json";
+
+        [Header("Cards")]
+        [SerializeField] private DeckSettings deckSettings = new DeckSettings();
+        [Tooltip("Show the active team's hand and equipment in the status bar. Temporary: the player panels replace it.")]
+        [SerializeField] private bool showCardDebugText = true;
 
         [Header("Hidden information")]
         [Tooltip("Hide other teams' Bandits and the captives they carry. Also available as a toggle in the HUD.")]
@@ -39,6 +45,7 @@ namespace Struikrovers.Game
                 hud.ActionGroupSelected += OnActionGroupSelected;
                 hud.HideBanditsChanged += OnHideBanditsChanged;
             }
+            if (promptView != null) promptView.OptionChosen += OnPromptChosen;
             if (input != null) input.PrimaryPressed += OnPrimary;
         }
 
@@ -52,6 +59,7 @@ namespace Struikrovers.Game
                 hud.ActionGroupSelected -= OnActionGroupSelected;
                 hud.HideBanditsChanged -= OnHideBanditsChanged;
             }
+            if (promptView != null) promptView.OptionChosen -= OnPromptChosen;
             if (input != null) input.PrimaryPressed -= OnPrimary;
         }
 
@@ -88,8 +96,9 @@ namespace Struikrovers.Game
 
             boardView.Build(grid);
             hud.SetHideBandits(hideEnemyBandits);
+            if (promptView != null) promptView.Hide();
 
-            turn = new TurnManager(state);
+            turn = new TurnManager(state, deckSettings);
 
             if (forcedDieResult > 0)
             {
@@ -120,6 +129,7 @@ namespace Struikrovers.Game
         private void OnPrimary() => turn?.OnPrimaryButton();
         private void OnCancel() => turn?.OnCancel();
         private void OnActionGroupSelected(string group) => turn?.OnActionGroupSelected(group);
+        private void OnPromptChosen(int index) => turn?.OnPromptChosen(index);
 
         private void OnHideBanditsChanged(bool value)
         {
@@ -151,10 +161,21 @@ namespace Struikrovers.Game
 
             boardView.Render(state, step, turn.CurrentTeam, hideEnemyBandits);
 
+            DecisionPrompt prompt = step.Prompt;
+            if (promptView != null)
+            {
+                if (prompt != null) promptView.Show(prompt);
+                else promptView.Hide();
+            }
+
+            string status = TurnMessages.BuildStatus(turn, clue);
+            if (showCardDebugText)
+                status += "\n" + TurnMessages.BuildCardSummary(state, turn.CurrentTeam);
+
             hud.Show(
-                TurnMessages.BuildStatus(turn, clue),
+                status,
                 boardView.Theme.GetStatusBackground(turn.CurrentTeam),
-                TurnMessages.GetPrimaryLabel(step.Primary),
+                prompt != null ? "Choose an option in the panel" : TurnMessages.GetPrimaryLabel(step.Primary),
                 step.Primary != PrimaryAction.None,
                 step.CanCancel,
                 step.AvailableActionGroups,

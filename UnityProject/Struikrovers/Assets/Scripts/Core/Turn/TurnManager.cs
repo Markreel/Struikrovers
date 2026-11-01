@@ -40,6 +40,7 @@ namespace Struikrovers.Core
         public BloodhoundRules BloodhoundRules { get; }
         public AmbushRules AmbushRules { get; }
         public CombatRules CombatRules { get; }
+        public CardSystem Cards { get; }
 
         public int CurrentTeam { get; private set; }
         public int CurrentSlotIndex { get; private set; }
@@ -62,7 +63,9 @@ namespace Struikrovers.Core
         /// Raised immediately, for messages and logging.
         public event Action<TurnEvent> EventRaised;
 
-        public TurnManager(GameState state)
+        public TurnManager(GameState state) : this(state, new DeckSettings()) { }
+
+        public TurnManager(GameState state, DeckSettings deckSettings)
         {
             State = state;
             Movement = new MovementRules(state);
@@ -71,6 +74,7 @@ namespace Struikrovers.Core
             BloodhoundRules = new BloodhoundRules(state, RescueRules);
             AmbushRules = new AmbushRules(state);
             CombatRules = new CombatRules(state, RescueRules, () => DieRoller());
+            Cards = new CardSystem(state, deckSettings, e => Raise(e));
 
             DieRoller = () => GameConfig.MovementDie[
                 UnityEngine.Random.Range(0, GameConfig.MovementDie.Length)];
@@ -121,6 +125,11 @@ namespace Struikrovers.Core
             });
         }
 
+        public void OnPromptChosen(int index)
+        {
+            Dispatch(() => CurrentState?.OnPromptChosen(index));
+        }
+
         // ---- Used by the states and actions ----
 
         internal void ChangeState(ITurnState next)
@@ -136,6 +145,23 @@ namespace Struikrovers.Core
         {
             EventRaised?.Invoke(turnEvent);
             MarkChanged();
+        }
+
+        /// Resolves every drawn card that is waiting (hand full? equip it?), asking the player
+        /// where needed, and then runs 'continuation'. Without waiting cards it runs at once.
+        internal void RunPending(Action continuation)
+        {
+            while (Cards.HasPending)
+            {
+                DecisionPrompt prompt = Cards.ProcessNext();
+                if (prompt == null)
+                    continue;
+
+                ChangeState(new PromptState(this, prompt, () => RunPending(continuation)));
+                return;
+            }
+
+            continuation();
         }
 
         /// Delivers the captives if the Bandit stands on its own castle, and reports it.
@@ -170,8 +196,9 @@ namespace Struikrovers.Core
             return fights.TrueForAll(f => f.AttackerWon);
         }
 
-        /// The active pawn has chosen where to stop. Fights and delivery are resolved
-        /// here, then the pawn gets its action (or the activation ends).
+        /// The active pawn has chosen where to stop. A Bandit fights the occupant of its hiding
+        /// place, delivery is resolved, then the pawn gets its action (or the activation ends).
+        /// Squires fight enemy Squires on the way, see ChooseDestinationState.
         internal void CompleteMovement()
         {
             Pawn pawn = ActivePawn;
@@ -214,7 +241,13 @@ namespace Struikrovers.Core
                 ChangeState(new ChooseActionState(this));
         }
 
+        /// Ends the active pawn's activation. Cards drawn during it are resolved first.
         internal void FinishActivation()
+        {
+            RunPending(FinishActivationNow);
+        }
+
+        private void FinishActivationNow()
         {
             if (IsRescueRun)
             {
@@ -277,14 +310,30 @@ namespace Struikrovers.Core
 
         private void AdvanceToNextPawn()
         {
-            CurrentSlotIndex++;
+            int next = CurrentSlotIndex + 1;
 
-            if (CurrentSlotIndex >= GameConfig.TurnOrder.Length)
+            if (next >= GameConfig.TurnOrder.Length)
             {
-                CurrentSlotIndex = 0;
-                CurrentTeam = (CurrentTeam + 1) % State.TeamCount;
+                // All three pawns have acted: the team draws a card to signal the end of its turn.
+                // The drawn cards are resolved (hand full? equip?) before the next team starts.
+                Cards.QueueDraw(CurrentTeam, Cards.EndOfTurnDraws);
+                RunPending(StartNextTeam);
+                return;
             }
 
+            CurrentSlotIndex = next;
+            ActivateCurrentSlot();
+        }
+
+        private void StartNextTeam()
+        {
+            CurrentSlotIndex = 0;
+            CurrentTeam = (CurrentTeam + 1) % State.TeamCount;
+            ActivateCurrentSlot();
+        }
+
+        private void ActivateCurrentSlot()
+        {
             ActivePawn = State.GetPawnForSlot(CurrentTeam, GameConfig.TurnOrder[CurrentSlotIndex]);
             ChangeState(new AwaitRollState(this));
         }

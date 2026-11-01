@@ -7,12 +7,14 @@ namespace Struikrovers.Core
         Sniffed,
         Chopped,
         Looted,
+        CannotLootPlentiful,
         AttackInvalidTarget,
         AttackBlocked,
         AttackFoundNothing,
         AttackNoCaptives,
         AttackRescued,
         RescueRunStarted,
+        RescueRunBlocked,
         SquireKilled,
         StabFoundNothing,
         StabKilled,
@@ -21,7 +23,11 @@ namespace Struikrovers.Core
         BanditExposed,
         BanditFight,
         SquireFight,
-        RescueRunBlocked
+        CardDrawn,
+        CardDiscarded,
+        CardEquipped,
+        DragonAwakes,
+        DeckEmpty
     }
 
     /// Something worth telling the players. Core never builds message text;
@@ -35,6 +41,9 @@ namespace Struikrovers.Core
         public int SecondAmount { get; }
         public SniffClue Clue { get; }
         public FightResult Fight { get; }
+        /// The team this is about (card events). -1 when not used.
+        public int Team { get; }
+        public CardDefinition Card { get; }
 
         private TurnEvent(
             TurnEventKind kind,
@@ -43,7 +52,9 @@ namespace Struikrovers.Core
             int amount = 0,
             int secondAmount = 0,
             SniffClue clue = SniffClue.NoCaptive,
-            FightResult fight = default)
+            FightResult fight = default,
+            int team = -1,
+            CardDefinition card = null)
         {
             Kind = kind;
             Actor = actor;
@@ -52,6 +63,8 @@ namespace Struikrovers.Core
             SecondAmount = secondAmount;
             Clue = clue;
             Fight = fight;
+            Team = team;
+            Card = card;
         }
 
         /// Actor = the Bandit, Target = the abducted Royalty.
@@ -68,8 +81,12 @@ namespace Struikrovers.Core
         public static TurnEvent Chopped(Pawn squire, int wood) =>
             new TurnEvent(TurnEventKind.Chopped, squire, amount: wood);
 
+        /// Amount = cards looted.
         public static TurnEvent Looted(Pawn looter, int cards) =>
             new TurnEvent(TurnEventKind.Looted, looter, amount: cards);
+
+        public static TurnEvent CannotLootPlentiful(Pawn looter) =>
+            new TurnEvent(TurnEventKind.CannotLootPlentiful, looter);
 
         public static TurnEvent AttackInvalidTarget(Pawn bloodhound) =>
             new TurnEvent(TurnEventKind.AttackInvalidTarget, bloodhound);
@@ -88,6 +105,10 @@ namespace Struikrovers.Core
 
         public static TurnEvent RescueRunStarted(Pawn royalty) =>
             new TurnEvent(TurnEventKind.RescueRunStarted, royalty);
+
+        /// Actor = the freed Royalty that could not run and was placed on the nearest free tile.
+        public static TurnEvent RescueRunBlocked(Pawn royalty) =>
+            new TurnEvent(TurnEventKind.RescueRunBlocked, royalty);
 
         /// Actor = the Squire, Target = the Bandit, Amount = wood stolen.
         public static TurnEvent SquireKilled(Pawn squire, Pawn bandit, int woodStolen) =>
@@ -116,8 +137,24 @@ namespace Struikrovers.Core
         public static TurnEvent SquireFight(FightResult fight) =>
             new TurnEvent(TurnEventKind.SquireFight, fight.Attacker, fight.Defender, fight: fight);
 
-        /// Actor = the freed Royalty that could not run and was placed on the nearest free tile.
-        public static TurnEvent RescueRunBlocked(Pawn royalty) =>
-            new TurnEvent(TurnEventKind.RescueRunBlocked, royalty);
+        // ---- Cards ----
+
+        /// The card itself stays private, so only the team is given.
+        public static TurnEvent CardDrawn(int team) =>
+            new TurnEvent(TurnEventKind.CardDrawn, team: team);
+
+        /// Discarded cards are face up, so everyone sees which card it was.
+        public static TurnEvent CardDiscarded(int team, CardDefinition card) =>
+            new TurnEvent(TurnEventKind.CardDiscarded, team: team, card: card);
+
+        /// Actor = the pawn that got the item.
+        public static TurnEvent CardEquipped(Pawn pawn, CardDefinition card) =>
+            new TurnEvent(TurnEventKind.CardEquipped, pawn, team: pawn.Team, card: card);
+
+        public static TurnEvent DragonAwakes(int team) =>
+            new TurnEvent(TurnEventKind.DragonAwakes, team: team);
+
+        public static TurnEvent DeckEmpty(int team) =>
+            new TurnEvent(TurnEventKind.DeckEmpty, team: team);
     }
 }
