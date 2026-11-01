@@ -27,7 +27,8 @@ namespace Struikrovers.Core
         CardDiscarded,
         CardEquipped,
         DragonAwakes,
-        DeckEmpty
+        DeckEmpty,
+        EquipmentTaken
     }
 
     /// Something worth telling the players. Core never builds message text;
@@ -156,5 +157,11 @@ namespace Struikrovers.Core
 
         public static TurnEvent DeckEmpty(int team) =>
             new TurnEvent(TurnEventKind.DeckEmpty, team: team);
+
+        /// Actor = the thief's pawn, Target = the pawn the item came from.
+        /// Amount = 1 when a Martyr Shield was taken instead of the chosen item.
+        public static TurnEvent EquipmentTaken(Pawn thief, Pawn victim, CardDefinition card, bool viaShield) =>
+            new TurnEvent(TurnEventKind.EquipmentTaken, thief, victim, viaShield ? 1 : 0,
+                          team: thief.Team, card: card);
     }
 }

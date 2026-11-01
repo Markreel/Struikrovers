@@ -39,12 +39,12 @@ namespace Struikrovers.Core
         private readonly Dictionary<PawnType, IAmbushResponse> responses =
             new Dictionary<PawnType, IAmbushResponse>();
 
-        public AmbushRules(GameState state)
+        public AmbushRules(GameState state, CardSystem cards)
         {
             this.state = state;
 
             responses[PawnType.Royalty] = new AbductionAmbush(state);
-            responses[PawnType.Squire] = new SquireKillAmbush(state);
+            responses[PawnType.Squire] = new SquireKillAmbush(state, cards);
         }
 
         /// Cards and equipment can change what happens to a pawn type.

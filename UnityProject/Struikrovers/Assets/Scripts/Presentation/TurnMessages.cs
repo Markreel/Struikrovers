@@ -37,7 +37,7 @@ namespace Struikrovers.Presentation
                             $"and stole {e.SecondAmount} wood.";
                         return new TurnMessage(
                             clue,
-                            clue + " Equipment and a discard-pile card reward will be added later.");
+                            clue + " Picking from the discard pile will be added later.");
                     }
 
                 case TurnEventKind.Sniffed:
@@ -96,7 +96,7 @@ namespace Struikrovers.Presentation
                             $"The Squire of Player {e.Actor.Team + 1} disturbed a hidden Bandit of " +
                             $"Player {e.Target.Team + 1} and was killed!" +
                             (e.Amount > 0 ? $" {e.Amount} wood was stolen." : "");
-                        return new TurnMessage(clue, clue + " Equipment stealing will be added later.");
+                        return new TurnMessage(clue, clue);
                     }
 
                 case TurnEventKind.StabFoundNothing:
@@ -110,7 +110,7 @@ namespace Struikrovers.Presentation
                         string clue =
                             $"The Squire of Player {e.Actor.Team + 1} stabbed a hiding place and killed " +
                             $"Player {e.Target.Team + 1}'s Bandit!";
-                        return new TurnMessage(clue, clue + " Equipment stealing will be added later.");
+                        return new TurnMessage(clue, clue);
                     }
 
                 case TurnEventKind.StabKilledOwnBandit:
@@ -162,6 +162,16 @@ namespace Struikrovers.Presentation
                 case TurnEventKind.DeckEmpty:
                     return new TurnMessage("The draw pile is empty.", "The draw pile is empty.");
 
+                case TurnEventKind.EquipmentTaken:
+                    {
+                        string clue = e.Amount > 0
+                            ? $"Player {e.Target.Team + 1}'s Martyr Shield was taken instead, by " +
+                              $"Player {e.Actor.Team + 1}'s {e.Actor.BaseType}."
+                            : $"Player {e.Actor.Team + 1}'s {e.Actor.BaseType} took {e.Card.Name} " +
+                              $"from Player {e.Target.Team + 1}'s {e.Target.BaseType}.";
+                        return new TurnMessage(clue, clue);
+                    }
+
                 default:
                     return new TurnMessage(null);
             }
@@ -195,7 +205,7 @@ namespace Struikrovers.Presentation
             if (f.ReleasedCount > 0)
                 text += $" {f.ReleasedCount} captive(s) escaped.";
 
-            return text + " Equipment stealing will be added later.";
+            return text;
         }
 
         public static string GetSniffText(SniffClue clue)

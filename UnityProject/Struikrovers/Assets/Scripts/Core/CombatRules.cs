@@ -74,11 +74,13 @@ namespace Struikrovers.Core
         private readonly GameState state;
         private readonly RescueRules rescue;
         private readonly Func<int> rollDie;
+        private readonly CardSystem cards;
 
-        public CombatRules(GameState state, RescueRules rescue, Func<int> rollDie)
+        public CombatRules(GameState state, RescueRules rescue, CardSystem cards, Func<int> rollDie)
         {
             this.state = state;
             this.rescue = rescue;
+            this.cards = cards;
             this.rollDie = rollDie;
         }
 
@@ -175,7 +177,7 @@ namespace Struikrovers.Core
             loserTeam.Wood -= stolen;
             state.Teams[winner.Team].Wood += stolen;
 
-            // Hook for later: the winner takes 1 piece of the loser's equipment of choice.
+            cards.QueueSteal(winner, loser);
 
             // A losing Bandit drops its captives. They are freed and run to safety.
             var rescued = new List<Pawn>();
@@ -228,7 +230,7 @@ namespace Struikrovers.Core
             if (loser.IsCarrying)
                 blocked = rescue.ReleaseCaptives(loser, spot, new HashSet<Vector2Int>(), rescued);
 
-            // Hook for later: the winner steals 1 piece of the loser's equipment of choice.
+            cards.QueueSteal(winner, loser);
 
             state.SendToCastle(loser);
 

@@ -44,7 +44,10 @@ namespace Struikrovers.Core
 
             ctx.State.SendToCastle(bandit);
 
-            // Hook for later: the Squire takes 1 piece of an enemy Bandit's equipment (no wood).
+            // The Squire takes 1 piece of an enemy Bandit's equipment (no wood).
+            if (!ownBandit)
+                ctx.Turn.Cards.QueueSteal(ctx.Actor, bandit);
+
             // Your own Bandit dies with no reward for anyone.
             ctx.Raise(ownBandit
                 ? TurnEvent.StabKilledOwnBandit(ctx.Actor)

@@ -147,4 +147,51 @@ namespace Struikrovers.Core
             return null;
         }
     }
+
+    /// The thief picks which of the victim's items it takes.
+    public sealed class StealEquipmentPrompt : DecisionPrompt
+    {
+        private readonly CardSystem cards;
+        private readonly Pawn thief;
+        private readonly Pawn victim;
+        private readonly List<EquipmentSlot> slots;
+
+        private StealEquipmentPrompt(
+            CardSystem cards, Pawn thief, Pawn victim,
+            List<EquipmentSlot> slots, List<PromptOption> options)
+            : base(thief.Team,
+                   $"Take equipment from Player {victim.Team + 1}'s {victim.BaseType}",
+                   "Choose 1 item. You can then equip it or discard it.",
+                   options)
+        {
+            this.cards = cards;
+            this.thief = thief;
+            this.victim = victim;
+            this.slots = slots;
+        }
+
+        public static StealEquipmentPrompt Create(CardSystem cards, Pawn thief, Pawn victim)
+        {
+            var slots = new List<EquipmentSlot>();
+            var options = new List<PromptOption>();
+
+            foreach (EquipmentSlot slot in new[] { EquipmentSlot.Clothing, EquipmentSlot.Weapon })
+            {
+                CardDefinition item = victim.Equipment.Get(slot);
+                if (item == null)
+                    continue;
+
+                slots.Add(slot);
+                options.Add(new PromptOption($"Take {item.Name} ({slot}): {item.Text}", item));
+            }
+
+            return new StealEquipmentPrompt(cards, thief, victim, slots, options);
+        }
+
+        public override DecisionPrompt Choose(int index)
+        {
+            cards.CompleteChosenTheft(thief, victim, slots[index]);
+            return null;
+        }
+    }
 }

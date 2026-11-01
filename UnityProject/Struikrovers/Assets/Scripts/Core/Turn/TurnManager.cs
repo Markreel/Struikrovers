@@ -71,12 +71,12 @@ namespace Struikrovers.Core
         {
             State = state;
             Movement = new MovementRules(state);
-            AbductionRules = new AbductionRules(state, Movement);
+            Cards = new CardSystem(state, deckSettings, e => Raise(e));
+            AbductionRules = new AbductionRules(state, Movement, Cards);
             RescueRules = new RescueRules(state, Movement);
             BloodhoundRules = new BloodhoundRules(state, RescueRules);
-            AmbushRules = new AmbushRules(state);
-            CombatRules = new CombatRules(state, RescueRules, () => DieRoller());
-            Cards = new CardSystem(state, deckSettings, e => Raise(e));
+            AmbushRules = new AmbushRules(state, Cards);
+            CombatRules = new CombatRules(state, RescueRules, Cards, () => DieRoller());
 
             DieRoller = () => GameConfig.MovementDie[
                 UnityEngine.Random.Range(0, GameConfig.MovementDie.Length)];

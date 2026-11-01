@@ -39,11 +39,13 @@ namespace Struikrovers.Core
     {
         private readonly GameState state;
         private readonly MovementRules movement;
+        private readonly CardSystem cards;
 
-        public AbductionRules(GameState state, MovementRules movement)
+        public AbductionRules(GameState state, MovementRules movement, CardSystem cards)
         {
             this.state = state;
             this.movement = movement;
+            this.cards = cards;
         }
 
         /// Action: abduct an enemy Royalty standing next to the Bandit.
@@ -206,6 +208,7 @@ namespace Struikrovers.Core
             foreach (Pawn royalty in delivered)
             {
                 state.ReturnCaptiveHome(bandit, royalty);
+                cards.QueueTakeAll(bandit, royalty);
 
                 TeamState victim = state.Teams[royalty.Team];
                 int stolen = Mathf.Min(GameConfig.WoodStolenOnDelivery, victim.Wood);

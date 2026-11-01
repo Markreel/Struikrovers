@@ -18,12 +18,17 @@ namespace Struikrovers.Core
         }
     }
 
-    /// The Squire is killed and goes back to its castle. The Bandit steals wood.
+    /// The Squire is killed and goes back to its castle. The Bandit steals wood and equipment.
     public sealed class SquireKillAmbush : IAmbushResponse
     {
         private readonly GameState state;
+        private readonly CardSystem cards;
 
-        public SquireKillAmbush(GameState state) { this.state = state; }
+        public SquireKillAmbush(GameState state, CardSystem cards)
+        {
+            this.state = state;
+            this.cards = cards;
+        }
 
         public AmbushResult Respond(Pawn victim, Pawn bandit)
         {
@@ -32,7 +37,8 @@ namespace Struikrovers.Core
             victimTeam.Wood -= stolen;
             state.Teams[bandit.Team].Wood += stolen;
 
-            // Hook for later: the Bandit also takes 1 Squire equipment of its choice.
+            // The Bandit takes 1 of the Squire's equipment (everything with Royal Inheritance).
+            cards.QueueSteal(bandit, victim);
 
             state.SendToCastle(victim);
             return new AmbushResult(AmbushKind.SquireKilled, bandit, stolen);
