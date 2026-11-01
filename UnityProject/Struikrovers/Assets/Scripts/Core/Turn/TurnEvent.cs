@@ -29,7 +29,9 @@ namespace Struikrovers.Core
         DragonAwakes,
         DeckEmpty,
         EquipmentTaken,
-        EquipmentMoved
+        EquipmentMoved,
+        AmbushPrevented,
+        CardTakenFromDiscard
     }
 
     /// Something worth telling the players. Core never builds message text;
@@ -168,5 +170,12 @@ namespace Struikrovers.Core
         /// Actor = the pawn the item left, Target = the pawn that got it. A swap raises two of these.
         public static TurnEvent EquipmentMoved(Pawn from, Pawn to, CardDefinition card) =>
             new TurnEvent(TurnEventKind.EquipmentMoved, from, to, team: from.Team, card: card);
+
+        /// Actor = the pawn that was protected, Card = the item that did it.
+        public static TurnEvent AmbushPrevented(Pawn victim, CardDefinition card) =>
+            new TurnEvent(TurnEventKind.AmbushPrevented, victim, team: victim.Team, card: card);
+
+        public static TurnEvent CardTakenFromDiscard(int team, CardDefinition card) =>
+            new TurnEvent(TurnEventKind.CardTakenFromDiscard, team: team, card: card);
     }
 }

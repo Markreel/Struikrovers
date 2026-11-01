@@ -3,29 +3,36 @@ using UnityEngine;
 
 namespace Struikrovers.Core
 {
-    public enum AmbushKind { None, Abducted, SquireKilled }
+    public enum AmbushKind { None, Abducted, SquireKilled, Prevented }
 
     public readonly struct AmbushResult
     {
         public readonly AmbushKind Kind;
-        /// The hidden Bandit that sprang the ambush.
+        /// The hidden Bandit that sprang (or would have sprung) the ambush.
         public readonly Pawn Bandit;
         /// Wood the Bandit took (SquireKilled only).
         public readonly int WoodStolen;
+        /// The item that stopped the ambush (Prevented only).
+        public readonly CardDefinition PreventedBy;
 
-        public AmbushResult(AmbushKind kind, Pawn bandit, int woodStolen = 0)
+        public AmbushResult(AmbushKind kind, Pawn bandit, int woodStolen = 0, CardDefinition preventedBy = null)
         {
             Kind = kind;
             Bandit = bandit;
             WoodStolen = woodStolen;
+            PreventedBy = preventedBy;
         }
 
-        public bool Happened => Kind != AmbushKind.None;
+        /// True when the victim was really ambushed (a prevented ambush did not happen).
+        public bool Happened => Kind != AmbushKind.None && Kind != AmbushKind.Prevented;
     }
 
     /// What happens to one type of pawn that disturbs a hidden Bandit.
     public interface IAmbushResponse
     {
+        /// True when the ambush would work right now (for example the Bandit has room for a captive).
+        bool CanRespond(Pawn victim, Pawn bandit);
+
         /// Return default (None) when the ambush does not happen after all.
         AmbushResult Respond(Pawn victim, Pawn bandit);
     }
@@ -33,6 +40,7 @@ namespace Struikrovers.Core
     /// A pawn that chops or loots a hiding place with an enemy Bandit in it gets
     /// ambushed. What that means depends on the pawn type, through the response table.
     /// A pawn type without an entry is not ambushed: the action just works normally.
+    /// Equipment can stop an ambush (Charming Chestplate).
     public sealed class AmbushRules
     {
         private readonly GameState state;
@@ -68,6 +76,13 @@ namespace Struikrovers.Core
 
             if (!responses.TryGetValue(victim.Type, out IAmbushResponse response))
                 return default;
+
+            // Nothing to prevent when the ambush couldn't happen anyway.
+            if (!response.CanRespond(victim, bandit))
+                return default;
+
+            if (EquipmentEffects.PreventsAmbush(victim, bandit, out CardDefinition source))
+                return new AmbushResult(AmbushKind.Prevented, bandit, 0, source);
 
             return response.Respond(victim, bandit);
         }

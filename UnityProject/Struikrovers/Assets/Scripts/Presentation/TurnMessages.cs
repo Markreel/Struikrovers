@@ -180,6 +180,18 @@ namespace Struikrovers.Presentation
                         return new TurnMessage(null, line);
                     }
 
+                case TurnEventKind.AmbushPrevented:
+                    // The line reveals that a Bandit was hiding there, so it can be turned off.
+                    if (!GameConfig.AnnouncePreventedAmbush)
+                        return new TurnMessage(null);
+
+                    return new TurnMessage(null,
+                        $"Player {e.Team + 1}'s {e.Card.Name} protected their {e.Actor.BaseType} from an ambush.");
+
+                case TurnEventKind.CardTakenFromDiscard:
+                    return new TurnMessage(null,
+                        $"Player {e.Team + 1} took {e.Card.Name} from the discard pile.");
+
                 default:
                     return new TurnMessage(null);
             }

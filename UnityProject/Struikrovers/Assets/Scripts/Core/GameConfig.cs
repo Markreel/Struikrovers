@@ -49,5 +49,17 @@ namespace Struikrovers.Core
 
         /// Safety net so a forced die can never loop forever. After this many ties the defender wins.
         public const int MaxFightRerolls = 100;
+
+        // ---- Equipment ----
+
+        /// Extra cards Greedy Gloves give when the wearer loots a bush.
+        public const int GreedyGlovesBonusCards = 1;
+
+        /// How many cards from the top of the discard pile Gravedigger's Spade lets you choose from.
+        public const int SpadePickCount = 3;
+
+        /// Log a line when Charming Chestplate stops an ambush. The line reveals that a Bandit hid
+        /// in that bush. Not a const, so turning it off doesn't cause an "unreachable code" warning.
+        public static readonly bool AnnouncePreventedAmbush = true;
     }
 }

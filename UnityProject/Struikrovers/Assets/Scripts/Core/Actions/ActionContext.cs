@@ -60,6 +60,11 @@ namespace Struikrovers.Core
                     Raise(TurnEvent.SquireKilled(Actor, result.Bandit, result.WoodStolen));
                     return true;
 
+                case AmbushKind.Prevented:
+                    // Equipment stopped it: the action carries on as if nobody was there.
+                    Raise(TurnEvent.AmbushPrevented(Actor, result.PreventedBy));
+                    return false;
+
                 default:
                     return false;
             }

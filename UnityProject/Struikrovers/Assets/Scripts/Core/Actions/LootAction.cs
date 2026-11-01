@@ -4,10 +4,11 @@ using UnityEngine;
 namespace Struikrovers.Core
 {
     /// Loot an adjacent bush for cards. A hidden enemy Bandit ambushes the looter instead
-    /// (a Royalty is abducted, a Squire is killed).
+    /// (a Royalty is abducted, a Squire is killed), unless equipment stops it.
     /// With fullPlentifulYield (Royalty) a plentiful bush gives 2 cards and becomes a normal
     /// bush. Without it (Squire) a plentiful bush gives 1 card and stays plentiful.
-    /// The cards are drawn from the draw pile and resolved before the activation ends.
+    /// Equipment can add cards (Greedy Gloves) or change where they come from (Gravedigger's
+    /// Spade). The cards are resolved before the activation ends.
     public sealed class LootAction : IPawnAction
     {
         private readonly bool fullPlentifulYield;
@@ -44,14 +45,17 @@ namespace Struikrovers.Core
             bool takesFullYield = terrain.IsPlentiful() && fullPlentifulYield;
             int cards = takesFullYield ? GameConfig.YieldPlentiful : GameConfig.YieldNormal;
 
+            // Equipment of the looting pawn adds cards on top of what the bush gives.
+            cards = EquipmentEffects.ModifyLootCount(ctx.Actor, cards);
+
             // Only a full-yield loot uses up the plentiful bush.
             if (takesFullYield)
                 ctx.Grid.SetTerrain(target, TerrainType.Bush);
 
             ctx.Raise(TurnEvent.Looted(ctx.Actor, cards));
 
-            // The cards are resolved (hand full? equip?) before the turn moves on.
-            ctx.Turn.Cards.QueueDraw(ctx.Actor.Team, cards);
+            // The cards are resolved (hand full? equip? Spade choice?) before the turn moves on.
+            ctx.Turn.Cards.QueueLoot(ctx.Actor, cards);
             return ActionOutcome.Performed;
         }
     }

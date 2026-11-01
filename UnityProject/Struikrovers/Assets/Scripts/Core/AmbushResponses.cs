@@ -9,6 +9,9 @@ namespace Struikrovers.Core
 
         public AbductionAmbush(GameState state) { this.state = state; }
 
+        public bool CanRespond(Pawn victim, Pawn bandit) =>
+            victim.Type == PawnType.Royalty && state.CanCarryMore(bandit);
+
         public AmbushResult Respond(Pawn victim, Pawn bandit)
         {
             if (!state.TryCapture(victim, bandit))
@@ -29,6 +32,8 @@ namespace Struikrovers.Core
             this.state = state;
             this.cards = cards;
         }
+
+        public bool CanRespond(Pawn victim, Pawn bandit) => true;
 
         public AmbushResult Respond(Pawn victim, Pawn bandit)
         {

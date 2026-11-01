@@ -23,7 +23,7 @@ MonoBehaviour:
   m_MinSize: {x: 300, y: 112}
   m_MaxSize: {x: 24288, y: 16192}
   vertical: 1
-  controlID: 83002
+  controlID: 86202
   draggingID: 0
 --- !u!114 &2
 MonoBehaviour:
@@ -152,7 +152,7 @@ MonoBehaviour:
   m_MinSize: {x: 300, y: 112}
   m_MaxSize: {x: 24288, y: 16192}
   vertical: 0
-  controlID: 83003
+  controlID: 86203
   draggingID: 0
 --- !u!114 &4
 MonoBehaviour:
@@ -178,7 +178,7 @@ MonoBehaviour:
   m_MinSize: {x: 200, y: 112}
   m_MaxSize: {x: 16192, y: 16192}
   vertical: 1
-  controlID: 83004
+  controlID: 86204
   draggingID: 0
 --- !u!114 &5
 MonoBehaviour:
@@ -204,7 +204,7 @@ MonoBehaviour:
   m_MinSize: {x: 200, y: 56}
   m_MaxSize: {x: 16192, y: 8096}
   vertical: 0
-  controlID: 83134
+  controlID: 86205
   draggingID: 0
 --- !u!114 &6
 MonoBehaviour:
@@ -225,8 +225,8 @@ MonoBehaviour:
     y: 0
     width: 1635
     height: 613
-  m_MinSize: {x: 200, y: 200}
-  m_MaxSize: {x: 4000, y: 4000}
+  m_MinSize: {x: 201, y: 226}
+  m_MaxSize: {x: 4001, y: 4026}
   m_ActualView: {fileID: 7}
   m_Panes:
   - {fileID: 7}
@@ -886,9 +886,9 @@ MonoBehaviour:
   m_AudioPlay: 0
   m_DebugDrawModesUseInteractiveLightBakingData: 0
   m_Position:
-    m_Target: {x: 566.0492, y: 353.39966, z: 0}
+    m_Target: {x: 399.08563, y: 375.72318, z: -1.9370393}
     speed: 2
-    m_Value: {x: 566.0492, y: 353.39966, z: 0}
+    m_Value: {x: 399.08563, y: 375.72318, z: -1.9370393}
   m_RenderMode: 0
   m_CameraMode:
     drawMode: 0
@@ -939,9 +939,9 @@ MonoBehaviour:
     speed: 2
     m_Value: {x: 0, y: 0, z: 0, w: 1}
   m_Size:
-    m_Target: 90.48696
+    m_Target: 284.19055
     speed: 2
-    m_Value: 90.48696
+    m_Value: 284.19055
   m_Ortho:
     m_Target: 1
     speed: 2
@@ -1786,8 +1786,6 @@ MonoBehaviour:
       - m_Data: -168348
       - m_Data: -168328
       - m_Data: -165816
-      - m_Data: -161494
-      - m_Data: -161162
       - m_Data: -159802
       - m_Data: -157416
       - m_Data: -138636
@@ -1854,7 +1852,7 @@ MonoBehaviour:
   m_MinSize: {x: 200, y: 56}
   m_MaxSize: {x: 16192, y: 8096}
   vertical: 0
-  controlID: 83005
+  controlID: 86085
   draggingID: 0
 --- !u!114 &14
 MonoBehaviour:
@@ -1884,7 +1882,7 @@ MonoBehaviour:
   - {fileID: 16}
   - {fileID: 17}
   m_Selected: 0
-  m_LastSelected: 2
+  m_LastSelected: 3
 --- !u!114 &15
 MonoBehaviour:
   m_ObjectHideFlags: 52
@@ -2090,7 +2088,7 @@ MonoBehaviour:
     m_SkipHidden: 0
     m_SearchArea: 1
     m_Folders:
-    - Assets/VisualThemes
+    - Assets/Scripts/Core/Cards
     m_Globs: []
     m_ProductIds: 
     m_AnyWithAssetOrigin: 0
@@ -2100,7 +2098,7 @@ MonoBehaviour:
   m_ViewMode: 1
   m_StartGridSize: 64
   m_LastFolders:
-  - Assets/VisualThemes
+  - Assets/Scripts/Core/Cards
   m_LastFoldersGridSize: -1
   m_LastProjectPath: D:\Projects\Physical\Struikrovers\Struikrovers Repository\UnityProject\Struikrovers
   m_LockTracker:
@@ -2109,9 +2107,9 @@ MonoBehaviour:
   m_FolderTreeState:
     scrollPos: {x: 0, y: 0}
     m_SelectedIDs:
-    - m_Data: 52428
+    - m_Data: 52444
     m_LastClickedID:
-      m_Data: 52428
+      m_Data: 52444
     m_ExpandedIDs:
     - m_Data: 0
     - m_Data: 52272
@@ -2184,10 +2182,9 @@ MonoBehaviour:
       m_Icon: {fileID: 0}
       m_ResourceFile: 
   m_ListAreaState:
-    m_SelectedInstanceIDs:
-    - m_Data: 51438
+    m_SelectedInstanceIDs: []
     m_LastClickedEntityId:
-      m_Data: 51438
+      m_Data: 0
     m_HadKeyboardFocusLastEvent: 1
     m_ExpandedInstanceIDs:
     - m_Data: 58656
@@ -2471,7 +2468,7 @@ MonoBehaviour:
     m_ControlHash: -371814159
     m_PrefName: Preview_InspectorPreview
   m_LastInspectedObjectEntityId:
-    m_Data: 51438
+    m_Data: 0
   m_LastVerticalScrollValue: 0
   m_GlobalObjectId: 
   m_InspectorMode: 0

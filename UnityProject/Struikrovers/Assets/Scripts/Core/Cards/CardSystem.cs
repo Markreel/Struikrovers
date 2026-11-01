@@ -4,8 +4,8 @@ using System.Collections.Generic;
 namespace Struikrovers.Core
 {
     /// The draw pile, the discard pile, and what happens to a card once it is drawn or taken.
-    /// Drawn cards and theft requests wait in one queue until they are resolved one at a time
-    /// (see TurnManager.RunPending). Resolving can ask the player something (a DecisionPrompt).
+    /// Drawn cards, looted cards and theft requests wait in one queue until they are resolved one
+    /// at a time (see TurnManager.RunPending). Resolving can ask the player something (a DecisionPrompt).
     public sealed class CardSystem
     {
         public const string MartyrShieldId = "martyr-shield";
@@ -14,7 +14,8 @@ namespace Struikrovers.Core
         private static readonly EquipmentSlot[] SlotsInOrder =
             { EquipmentSlot.Clothing, EquipmentSlot.Weapon };
 
-        // Either a card to resolve (Card is set) or an equipment theft (Thief and Victim are set).
+        // A card to resolve (Card is set), an equipment theft (Thief and Victim are set), or a
+        // looted card whose source is chosen when it is resolved (LootPawn is set).
         private sealed class PendingItem
         {
             public int Team;
@@ -22,6 +23,7 @@ namespace Struikrovers.Core
             public Pawn Thief;
             public Pawn Victim;
             public bool TakeAll;
+            public Pawn LootPawn;
         }
 
         private readonly GameState state;
@@ -56,6 +58,9 @@ namespace Struikrovers.Core
         public int EndOfTurnDraws => settings.endOfTurnDraws;
         public bool HasPending => pending.Count > 0;
 
+        /// False when equipment (Warding Amulet) protects the team. Phase F's curse cards use this.
+        public bool CanBeCursed(int team) => !EquipmentEffects.PreventsCurse(state, team, out _);
+
         // ---- Drawing ----
 
         /// Takes cards from the draw pile. They are resolved later, one by one.
@@ -78,6 +83,24 @@ namespace Struikrovers.Core
             }
 
             return drawn;
+        }
+
+        /// Cards looted from a bush by this pawn. Normally these are plain draws. When the pawn
+        /// wears Gravedigger's Spade, each card gets its own choice when it is resolved: the top
+        /// of the draw pile, or one of the top cards of the discard pile.
+        public void QueueLoot(Pawn looter, int count)
+        {
+            if (looter == null || count <= 0)
+                return;
+
+            if (!EquipmentEffects.OffersDiscardPick(looter))
+            {
+                QueueDraw(looter.Team, count);
+                return;
+            }
+
+            for (int i = 0; i < count; i++)
+                pending.Enqueue(new PendingItem { Team = looter.Team, LootPawn = looter });
         }
 
         /// A card that came from somewhere else (stolen, picked): handled like a drawn one.
@@ -122,28 +145,92 @@ namespace Struikrovers.Core
             if (item.Thief != null)
                 return ResolveTheft(item);
 
-            CardDefinition card = item.Card;
+            if (item.LootPawn != null)
+                return ResolveLootChoice(item);
 
+            return ResolveCard(item.Team, item.Card);
+        }
+
+        /// What happens to a card that has just arrived: dragon, equipment or hand.
+        /// Returns a prompt when the player has to decide something.
+        internal DecisionPrompt ResolveCard(int team, CardDefinition card)
+        {
             switch (card.Kind)
             {
                 case CardKind.Dragon:
                     // The dragon phase isn't built yet: announce it and carry on.
                     DragonDrawn = true;
-                    raise(TurnEvent.DragonAwakes(item.Team));
+                    raise(TurnEvent.DragonAwakes(team));
                     return null;
 
                 case CardKind.Equipment:
-                    return EquipPawnPrompt.Create(this, state, item.Team, card);
+                    return EquipPawnPrompt.Create(this, state, team, card);
 
                 default:
-                    if (state.Teams[item.Team].Hand.Count < settings.maxHandSize)
+                    if (state.Teams[team].Hand.Count < settings.maxHandSize)
                     {
-                        AddToHand(item.Team, card);
+                        AddToHand(team, card);
                         return null;
                     }
 
-                    return new HandFullPrompt(this, state, item.Team, card);
+                    return new HandFullPrompt(this, state, team, card);
             }
+        }
+
+        // A card looted with Gravedigger's Spade: ask where it comes from, when there is a choice.
+        private DecisionPrompt ResolveLootChoice(PendingItem item)
+        {
+            bool canDraw = drawPile.Count > 0;
+            bool canPick = discardPile.Count > 0;
+
+            if (!canPick)
+            {
+                // Nothing to pick from: an ordinary draw (this also reports an empty draw pile).
+                CardDefinition drawn = DrawFromPile(item.Team);
+                return drawn != null ? ResolveCard(item.Team, drawn) : null;
+            }
+
+            if (!canDraw)
+                return new DiscardPickPrompt(this, item.Team, false);
+
+            return new LootSourcePrompt(this, item.Team);
+        }
+
+        /// Takes the top card of the draw pile right now. Null (and a message) when it is empty.
+        internal CardDefinition DrawFromPile(int team)
+        {
+            if (!drawPile.TryDraw(out CardDefinition card))
+            {
+                raise(TurnEvent.DeckEmpty(team));
+                return null;
+            }
+
+            raise(TurnEvent.CardDrawn(team));
+            return card;
+        }
+
+        /// The top cards of the discard pile, top first.
+        public List<CardDefinition> PeekDiscard(int count)
+        {
+            var result = new List<CardDefinition>();
+
+            for (int i = discardPile.Count - 1; i >= 0 && result.Count < count; i--)
+                result.Add(discardPile[i]);
+
+            return result;
+        }
+
+        /// Takes a card from the discard pile. fromTop = 0 is the top card.
+        internal CardDefinition TakeFromDiscard(int team, int fromTop)
+        {
+            int index = discardPile.Count - 1 - fromTop;
+            if (fromTop < 0 || index < 0)
+                return null;
+
+            CardDefinition card = discardPile[index];
+            discardPile.RemoveAt(index);
+            raise(TurnEvent.CardTakenFromDiscard(team, card));
+            return card;
         }
 
         private DecisionPrompt ResolveTheft(PendingItem item)

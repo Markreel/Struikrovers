@@ -2151,15 +2151,19 @@ MonoBehaviour:
   privacyOverlay: {fileID: 545035576}
   mapFileName: default-map.json
   deckSettings:
-    handCardCopies: 3
+    handCardCopies: 0
     equipmentCopies: 1
-    curseCopies: 1
+    curseCopies: 0
     overrides: []
     maxHandSize: 5
     dragonBottomCount: 10
-    endOfTurnDraws: 1
-    seed: 0
-    topCards: []
+    endOfTurnDraws: 2
+    seed: 1
+    topCards:
+    - greedy-gloves
+    - gravediggers-spade
+    - charming-chestplate
+    - warding-amulet
   hideEnemyBandits: 0
   usePrivacyOverlay: 1
   spaceRevealsOverlay: 1
@@ -2703,7 +2707,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3926598898122137803, guid: 7cddd56b296cb5a448fcad97040bcaab, type: 3}
       propertyPath: m_IsActive
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 4651163567109710116, guid: 7cddd56b296cb5a448fcad97040bcaab, type: 3}
       propertyPath: m_fontColor32.rgba
@@ -2788,6 +2792,10 @@ PrefabInstance:
     - target: {fileID: 5502155856664230602, guid: 7cddd56b296cb5a448fcad97040bcaab, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5649798788327566671, guid: 7cddd56b296cb5a448fcad97040bcaab, type: 3}
+      propertyPath: m_fontColor32.rgba
+      value: 4294967295
       objectReference: {fileID: 0}
     - target: {fileID: 5714737236711656088, guid: 7cddd56b296cb5a448fcad97040bcaab, type: 3}
       propertyPath: m_Name

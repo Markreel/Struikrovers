@@ -194,4 +194,81 @@ namespace Struikrovers.Core
             return null;
         }
     }
+
+    /// Gravedigger's Spade: a looted card comes from the top of the draw pile, or you pick one
+    /// of the top cards of the discard pile.
+    public sealed class LootSourcePrompt : DecisionPrompt
+    {
+        private readonly CardSystem cards;
+
+        public LootSourcePrompt(CardSystem cards, int team)
+            : base(team,
+                   "Gravedigger's Spade",
+                   "Where does this looted card come from?",
+                   new List<PromptOption>
+                   {
+                   new PromptOption("Draw the top card of the draw pile"),
+                   new PromptOption(
+                       $"Pick 1 of the top {GameConfig.SpadePickCount} cards of the discard pile",
+                       cards.TopOfDiscard)
+                   })
+        {
+            this.cards = cards;
+        }
+
+        public override DecisionPrompt Choose(int index)
+        {
+            if (index == 0)
+            {
+                CardDefinition card = cards.DrawFromPile(Team);
+                return card != null ? cards.ResolveCard(Team, card) : null;
+            }
+
+            return new DiscardPickPrompt(cards, Team, true);
+        }
+    }
+
+    /// Pick one of the top cards of the discard pile. With canGoBack, the last option returns
+    /// to the choice between drawing and picking.
+    public sealed class DiscardPickPrompt : DecisionPrompt
+    {
+        private readonly CardSystem cards;
+        private readonly List<CardDefinition> choices;
+
+        public DiscardPickPrompt(CardSystem cards, int team, bool canGoBack)
+            : this(cards, team, canGoBack, cards.PeekDiscard(GameConfig.SpadePickCount)) { }
+
+        private DiscardPickPrompt(CardSystem cards, int team, bool canGoBack, List<CardDefinition> choices)
+            : base(team,
+                   "Pick a card from the discard pile",
+                   "The top card is listed first.",
+                   BuildOptions(choices, canGoBack))
+        {
+            this.cards = cards;
+            this.choices = choices;
+        }
+
+        private static List<PromptOption> BuildOptions(List<CardDefinition> choices, bool canGoBack)
+        {
+            var options = new List<PromptOption>();
+
+            foreach (CardDefinition card in choices)
+                options.Add(new PromptOption($"Take {card.Name}: {card.Text}", card));
+
+            if (canGoBack)
+                options.Add(new PromptOption("Back: draw from the draw pile instead"));
+
+            return options;
+        }
+
+        public override DecisionPrompt Choose(int index)
+        {
+            // Past the last card is the "Back" option.
+            if (index >= choices.Count)
+                return new LootSourcePrompt(cards, Team);
+
+            CardDefinition card = cards.TakeFromDiscard(Team, index);
+            return card != null ? cards.ResolveCard(Team, card) : null;
+        }
+    }
 }

@@ -128,6 +128,7 @@ namespace Struikrovers.Presentation
                 // A Royalty keeps its equipment while it is a Bloodhound.
                 bool asBloodhound = pawn != null && pawn.Type != pawn.BaseType;
                 row.label.text = asBloodhound ? role + " (Bloodhound)" : role.ToString();
+                row.label.color = theme.GetRoleColor(role);
 
                 row.clothing.ShowCard(pawn?.Equipment.Clothing, true);
                 if (pawn == null || pawn.Equipment.Clothing == null)

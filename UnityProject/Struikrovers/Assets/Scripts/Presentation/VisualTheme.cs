@@ -209,6 +209,18 @@ namespace Struikrovers.Presentation
             }
         }
 
+        /// The colour of a pawn role, the same as the equipment made for it.
+        public Color GetRoleColor(PawnType role)
+        {
+            switch (role)
+            {
+                case PawnType.Royalty: return royaltyEquipment;
+                case PawnType.Squire: return squireEquipment;
+                case PawnType.Bandit: return banditEquipment;
+                default: return generalEquipment;
+            }
+        }
+
         private Sprite Resolve(Sprite assigned, string resourceName)
         {
             if (assigned != null)
