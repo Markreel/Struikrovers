@@ -23,7 +23,7 @@ MonoBehaviour:
   m_MinSize: {x: 300, y: 112}
   m_MaxSize: {x: 24288, y: 16192}
   vertical: 1
-  controlID: 114158
+  controlID: 116072
   draggingID: 0
 --- !u!114 &2
 MonoBehaviour:
@@ -152,7 +152,7 @@ MonoBehaviour:
   m_MinSize: {x: 300, y: 112}
   m_MaxSize: {x: 24288, y: 16192}
   vertical: 0
-  controlID: 114159
+  controlID: 116073
   draggingID: 0
 --- !u!114 &4
 MonoBehaviour:
@@ -178,7 +178,7 @@ MonoBehaviour:
   m_MinSize: {x: 200, y: 112}
   m_MaxSize: {x: 16192, y: 16192}
   vertical: 1
-  controlID: 114160
+  controlID: 116074
   draggingID: 0
 --- !u!114 &5
 MonoBehaviour:
@@ -204,7 +204,7 @@ MonoBehaviour:
   m_MinSize: {x: 200, y: 56}
   m_MaxSize: {x: 16192, y: 8096}
   vertical: 0
-  controlID: 114161
+  controlID: 115999
   draggingID: 0
 --- !u!114 &6
 MonoBehaviour:
@@ -1779,6 +1779,9 @@ MonoBehaviour:
       m_LastClickedID:
         m_Data: 0
       m_ExpandedIDs:
+      - m_Data: -768066
+      - m_Data: -768054
+      - m_Data: -768048
       - m_Data: -761930
       - m_Data: -753558
       - m_Data: -438174
@@ -1853,7 +1856,7 @@ MonoBehaviour:
   m_MinSize: {x: 200, y: 56}
   m_MaxSize: {x: 16192, y: 8096}
   vertical: 0
-  controlID: 114077
+  controlID: 116075
   draggingID: 0
 --- !u!114 &14
 MonoBehaviour:
@@ -1883,7 +1886,7 @@ MonoBehaviour:
   - {fileID: 16}
   - {fileID: 17}
   m_Selected: 0
-  m_LastSelected: 1
+  m_LastSelected: 3
 --- !u!114 &15
 MonoBehaviour:
   m_ObjectHideFlags: 52
@@ -2089,7 +2092,7 @@ MonoBehaviour:
     m_SkipHidden: 0
     m_SearchArea: 1
     m_Folders:
-    - Assets/Prefabs/UI
+    - Assets/VisualThemes
     m_Globs: []
     m_ProductIds: 
     m_AnyWithAssetOrigin: 0
@@ -2099,7 +2102,7 @@ MonoBehaviour:
   m_ViewMode: 1
   m_StartGridSize: 64
   m_LastFolders:
-  - Assets/Prefabs/UI
+  - Assets/VisualThemes
   m_LastFoldersGridSize: -1
   m_LastProjectPath: D:\Projects\Physical\Struikrovers\Struikrovers Repository\UnityProject\Struikrovers
   m_LockTracker:
@@ -2108,14 +2111,13 @@ MonoBehaviour:
   m_FolderTreeState:
     scrollPos: {x: 0, y: 0}
     m_SelectedIDs:
-    - m_Data: 55424
+    - m_Data: 52428
     m_LastClickedID:
-      m_Data: 55424
+      m_Data: 52428
     m_ExpandedIDs:
     - m_Data: 0
     - m_Data: 52272
-    - m_Data: 52274
-    - m_Data: 52406
+    - m_Data: 52408
     - m_Data: 52414
     - m_Data: 52434
     - m_Data: 1000000000
@@ -2188,7 +2190,7 @@ MonoBehaviour:
     m_SelectedInstanceIDs: []
     m_LastClickedEntityId:
       m_Data: 0
-    m_HadKeyboardFocusLastEvent: 0
+    m_HadKeyboardFocusLastEvent: 1
     m_ExpandedInstanceIDs:
     - m_Data: 58656
     - m_Data: 58644
@@ -2420,8 +2422,8 @@ MonoBehaviour:
     y: 0
     width: 482
     height: 1293
-  m_MinSize: {x: 276, y: 76}
-  m_MaxSize: {x: 4001, y: 4026}
+  m_MinSize: {x: 275, y: 50}
+  m_MaxSize: {x: 4000, y: 4000}
   m_ActualView: {fileID: 22}
   m_Panes:
   - {fileID: 22}
