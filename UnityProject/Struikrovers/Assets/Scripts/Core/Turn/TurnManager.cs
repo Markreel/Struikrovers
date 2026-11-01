@@ -43,6 +43,8 @@ namespace Struikrovers.Core
         public CardSystem Cards { get; }
 
         public int CurrentTeam { get; private set; }
+        /// The team whose turn it is. Unlike CurrentTeam it stays put during a rescue run.
+        public int TurnOwner { get; private set; }
         public int CurrentSlotIndex { get; private set; }
         public Pawn ActivePawn { get; private set; }
         public ITurnState CurrentState { get; private set; }
@@ -87,6 +89,7 @@ namespace Struikrovers.Core
             Dispatch(() =>
             {
                 CurrentTeam = 0;
+                TurnOwner = 0;
                 CurrentSlotIndex = 0;
                 ActivePawn = State.GetPawnForSlot(CurrentTeam, GameConfig.TurnOrder[CurrentSlotIndex]);
                 ChangeState(new AwaitRollState(this));
@@ -329,6 +332,7 @@ namespace Struikrovers.Core
         {
             CurrentSlotIndex = 0;
             CurrentTeam = (CurrentTeam + 1) % State.TeamCount;
+            TurnOwner = CurrentTeam;
             ActivateCurrentSlot();
         }
 

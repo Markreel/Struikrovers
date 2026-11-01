@@ -43,10 +43,17 @@ namespace Struikrovers.Presentation
         [SerializeField] private Color quickAction = new Color(0.90f, 0.30f, 0.60f);
         [SerializeField] private Color blockedDestination = new Color(0.60f, 0.22f, 0.22f);
 
-
         [Header("Frame")]
         [SerializeField] private Color frameFiller = new Color(0.12f, 0.12f, 0.14f);
         [SerializeField] private Color frameDark = new Color(0.08f, 0.09f, 0.12f);
+
+        [Header("Cards")]
+        [SerializeField] private Color handCard = new Color(0.30f, 0.50f, 0.80f);
+        [SerializeField] private Color curseCard = new Color(0.55f, 0.25f, 0.65f);
+        [SerializeField] private Color equipmentCard = new Color(0.75f, 0.55f, 0.25f);
+        [SerializeField] private Color dragonCard = new Color(0.75f, 0.15f, 0.15f);
+        [SerializeField] private Color cardBack = new Color(0.25f, 0.28f, 0.35f);
+        [SerializeField] private Color emptySlot = new Color(0.16f, 0.18f, 0.22f, 0.8f);
 
         [Header("Pawn sprites (optional, falls back to Resources/StruikroversIcons)")]
         [SerializeField] private Sprite badge;
@@ -66,6 +73,9 @@ namespace Struikrovers.Presentation
         public Color TerrainLabelColor => terrainLabel;
         public Color MoveFightColor => quickAction;
         public Color BlockedDestinationColor => blockedDestination;
+        public Color CardBackColor => cardBack;
+        public Color EmptySlotColor => emptySlot;
+
 
         // ---- Actions ----
 
@@ -157,6 +167,17 @@ namespace Struikrovers.Presentation
                 case PawnType.Bandit: return "B";
                 case PawnType.Bloodhound: return "H";
                 default: return "?";
+            }
+        }
+
+        public Color GetCardColor(CardKind kind)
+        {
+            switch (kind)
+            {
+                case CardKind.Hand: return handCard;
+                case CardKind.Curse: return curseCard;
+                case CardKind.Equipment: return equipmentCard;
+                default: return dragonCard;
             }
         }
 

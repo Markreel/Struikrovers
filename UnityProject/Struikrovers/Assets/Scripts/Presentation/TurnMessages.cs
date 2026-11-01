@@ -298,32 +298,5 @@ namespace Struikrovers.Presentation
 
             return message;
         }
-
-        /// Hand and equipment of one team as text. Temporary, until the player panels exist.
-        public static string BuildCardSummary(GameState state, int team)
-        {
-            TeamState stats = state.Teams[team];
-
-            string hand = "";
-            foreach (CardDefinition card in stats.Hand)
-                hand += (hand.Length > 0 ? ", " : "") + card.Name;
-
-            string text = "Hand (" + stats.Hand.Count + "): " + (hand.Length > 0 ? hand : "empty");
-
-            foreach (PawnType role in GameConfig.TurnOrder)
-            {
-                Pawn pawn = state.GetPawnByRole(team, role);
-                if (pawn == null)
-                    continue;
-
-                string items = "";
-                foreach (CardDefinition item in pawn.Equipment.Items)
-                    items += (items.Length > 0 ? ", " : "") + item.Name + " (" + item.Modifier.ToString("+0;-0;0") + ")";
-
-                text += "  |  " + role + ": " + (items.Length > 0 ? items : "-");
-            }
-
-            return text;
-        }
     }
 }
