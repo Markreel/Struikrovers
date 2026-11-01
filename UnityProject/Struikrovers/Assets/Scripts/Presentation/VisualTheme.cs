@@ -55,6 +55,13 @@ namespace Struikrovers.Presentation
         [SerializeField] private Color cardBack = new Color(0.25f, 0.28f, 0.35f);
         [SerializeField] private Color emptySlot = new Color(0.16f, 0.18f, 0.22f, 0.8f);
 
+        [Header("Equipment cards by pawn")]
+        [SerializeField] private Color royaltyEquipment = new Color(0.90f, 0.72f, 0.15f);   // gold
+        [SerializeField] private Color squireEquipment = new Color(0.25f, 0.45f, 0.85f);    // blue
+        [SerializeField] private Color banditEquipment = new Color(0.25f, 0.65f, 0.30f);    // green
+        [SerializeField] private Color generalEquipment = new Color(0.80f, 0.25f, 0.75f);   // magenta
+
+
         [Header("Pawn sprites (optional, falls back to Resources/StruikroversIcons)")]
         [SerializeField] private Sprite badge;
         [SerializeField] private Sprite royalty;
@@ -178,6 +185,27 @@ namespace Struikrovers.Presentation
                 case CardKind.Curse: return curseCard;
                 case CardKind.Equipment: return equipmentCard;
                 default: return dragonCard;
+            }
+        }
+
+        /// Colour of a card. Equipment is coloured by the pawn it is made for; the rest by kind.
+        public Color GetCardColor(CardDefinition card)
+        {
+            if (card == null)
+                return emptySlot;
+
+            if (!card.IsEquipment)
+                return GetCardColor(card.Kind);
+
+            if (!card.UsableBy.HasValue)
+                return generalEquipment;
+
+            switch (card.UsableBy.Value)
+            {
+                case PawnType.Royalty: return royaltyEquipment;
+                case PawnType.Squire: return squireEquipment;
+                case PawnType.Bandit: return banditEquipment;
+                default: return generalEquipment;
             }
         }
 

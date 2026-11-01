@@ -28,7 +28,8 @@ namespace Struikrovers.Core
         CardEquipped,
         DragonAwakes,
         DeckEmpty,
-        EquipmentTaken
+        EquipmentTaken,
+        EquipmentMoved
     }
 
     /// Something worth telling the players. Core never builds message text;
@@ -163,5 +164,9 @@ namespace Struikrovers.Core
         public static TurnEvent EquipmentTaken(Pawn thief, Pawn victim, CardDefinition card, bool viaShield) =>
             new TurnEvent(TurnEventKind.EquipmentTaken, thief, victim, viaShield ? 1 : 0,
                           team: thief.Team, card: card);
+
+        /// Actor = the pawn the item left, Target = the pawn that got it. A swap raises two of these.
+        public static TurnEvent EquipmentMoved(Pawn from, Pawn to, CardDefinition card) =>
+            new TurnEvent(TurnEventKind.EquipmentMoved, from, to, team: from.Team, card: card);
     }
 }

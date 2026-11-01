@@ -283,6 +283,93 @@ namespace Struikrovers.Core
             return card;
         }
 
+        // ---- Managing your own equipment and hand ----
+        // All of this is voluntary, so it never triggers the Martyr Shield.
+
+        /// What the owner can do with the item in this slot: move it to a pawn that can wear it,
+        /// swap with that pawn's item when both fit, or discard it.
+        public List<ManageOption> GetEquipmentOptions(Pawn pawn, EquipmentSlot slot)
+        {
+            var options = new List<ManageOption>();
+
+            CardDefinition item = pawn?.Equipment.Get(slot);
+            if (item == null)
+                return options;
+
+            foreach (PawnType role in GameConfig.TurnOrder)
+            {
+                Pawn other = state.GetPawnByRole(pawn.Team, role);
+                if (other == null || other == pawn || !CanEquip(other, item))
+                    continue;
+
+                CardDefinition occupant = other.Equipment.Get(slot);
+
+                if (occupant == null) options.Add(ManageOption.Move(other));
+                else if (CanEquip(pawn, occupant)) options.Add(ManageOption.Swap(other));
+            }
+
+            options.Add(ManageOption.DiscardEquipment());
+            return options;
+        }
+
+        /// Moves the item to another pawn of the same team, swapping when the slot there is taken.
+        internal bool MoveEquipment(Pawn from, EquipmentSlot slot, Pawn to)
+        {
+            if (from == null || to == null || from == to || from.Team != to.Team)
+                return false;
+
+            CardDefinition item = from.Equipment.Get(slot);
+            if (item == null || !CanEquip(to, item))
+                return false;
+
+            CardDefinition other = to.Equipment.Get(slot);
+            if (other != null && !CanEquip(from, other))
+                return false;
+
+            Unequip(from, slot);
+            if (other != null)
+                Unequip(to, slot);
+
+            Place(to, item);
+            raise(TurnEvent.EquipmentMoved(from, to, item));
+
+            if (other != null)
+            {
+                Place(from, other);
+                raise(TurnEvent.EquipmentMoved(to, from, other));
+            }
+
+            return true;
+        }
+
+        internal bool DiscardEquipment(Pawn pawn, EquipmentSlot slot)
+        {
+            CardDefinition card = Unequip(pawn, slot);
+            if (card == null)
+                return false;
+
+            Discard(pawn.Team, card);
+            return true;
+        }
+
+        /// 'expected' guards against a stale index: the card at that position must still be this one.
+        internal bool DiscardHandCard(int team, int index, CardDefinition expected)
+        {
+            List<CardDefinition> hand = state.Teams[team].hand;
+            if (index < 0 || index >= hand.Count || hand[index] != expected)
+                return false;
+
+            Discard(team, RemoveFromHand(team, index));
+            return true;
+        }
+
+        // Puts the item in its slot and starts its effect, without discarding or announcing anything.
+        private static void Place(Pawn pawn, CardDefinition card)
+        {
+            pawn.Equipment.Set(card.Slot, card);
+            EquipmentEffects.Get(card)?.OnEquipped(pawn, card);
+        }
+
         /// Pawn-specific items only fit their own pawn. General items fit every pawn.
         public static bool CanEquip(Pawn pawn, CardDefinition card) =>
             pawn != null && card != null && card.IsEquipment &&

@@ -133,6 +133,39 @@ namespace Struikrovers.Core
             Dispatch(() => CurrentState?.OnPromptChosen(index));
         }
 
+        // ---- Managing your own cards (any time during your turn, except while a question is open) ----
+
+        /// True when the turn owner may move or discard cards right now.
+        public bool CanManage =>
+            CurrentState != null && CurrentState.Prompt == null && !Cards.HasPending;
+
+        public void MoveEquipment(Pawn pawn, EquipmentSlot slot, Pawn target)
+        {
+            Dispatch(() =>
+            {
+                if (CanManage && pawn != null && pawn.Team == TurnOwner)
+                    Cards.MoveEquipment(pawn, slot, target);
+            });
+        }
+
+        public void DiscardEquipment(Pawn pawn, EquipmentSlot slot)
+        {
+            Dispatch(() =>
+            {
+                if (CanManage && pawn != null && pawn.Team == TurnOwner)
+                    Cards.DiscardEquipment(pawn, slot);
+            });
+        }
+
+        public void DiscardHandCard(int team, int index, CardDefinition expected)
+        {
+            Dispatch(() =>
+            {
+                if (CanManage && team == TurnOwner)
+                    Cards.DiscardHandCard(team, index, expected);
+            });
+        }
+
         // ---- Used by the states and actions ----
 
         internal void ChangeState(ITurnState next)

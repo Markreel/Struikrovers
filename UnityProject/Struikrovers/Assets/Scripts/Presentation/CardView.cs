@@ -39,7 +39,7 @@ namespace Struikrovers.Presentation
             if (!faceUp) { ShowBack(); return; }
 
             Card = card;
-            background.color = theme.GetCardColor(card.Kind);
+            background.color = theme.GetCardColor(card);
 
             nameLabel.gameObject.SetActive(true);
             nameLabel.text = card.Name;

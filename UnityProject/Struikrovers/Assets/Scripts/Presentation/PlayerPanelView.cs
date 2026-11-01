@@ -35,6 +35,9 @@ namespace Struikrovers.Presentation
         private CardDetailView detail;
         private int team;
 
+        /// A face-up card of this team was clicked (equipment or a card in hand).
+        public event Action<CardClick> CardClicked;
+
         public void Initialize(int team, VisualTheme theme, CardDetailView detail)
         {
             this.team = team;
@@ -48,13 +51,18 @@ namespace Struikrovers.Presentation
             {
                 row.clothing.Setup(theme, detail);
                 row.weapon.Setup(theme, detail);
+                Listen(row.clothing);
+                Listen(row.weapon);
             }
 
             foreach (CardView slot in curseSlots)
                 slot.Setup(theme, detail);
 
             foreach (CardView card in handCards)
+            {
                 card.Setup(theme, detail);
+                Listen(card);
+            }
         }
 
         public void Refresh(GameState state, int maxHandSize, bool handFaceUp, bool isActive)
@@ -69,6 +77,44 @@ namespace Struikrovers.Presentation
             RefreshEquipment(state);
             RefreshCurses(stats);
             RefreshHand(stats, handFaceUp);
+        }
+
+        // Unsubscribing first means Initialize can run again (reload) without double clicks.
+        private void Listen(CardView view)
+        {
+            view.Clicked -= OnCardViewClicked;
+            view.Clicked += OnCardViewClicked;
+        }
+
+        private void OnCardViewClicked(CardView view)
+        {
+            // Empty slots and face-down cards have no card to act on.
+            if (view.Card == null)
+                return;
+
+            int handIndex = handCards.IndexOf(view);
+            if (handIndex >= 0)
+            {
+                CardClicked?.Invoke(CardClick.Hand(team, handIndex, view.Card));
+                return;
+            }
+
+            for (int i = 0; i < pawnRows.Length && i < GameConfig.TurnOrder.Length; i++)
+            {
+                PawnType role = GameConfig.TurnOrder[i];
+
+                if (view == pawnRows[i].clothing)
+                {
+                    CardClicked?.Invoke(CardClick.Equipment(team, role, EquipmentSlot.Clothing, view.Card));
+                    return;
+                }
+
+                if (view == pawnRows[i].weapon)
+                {
+                    CardClicked?.Invoke(CardClick.Equipment(team, role, EquipmentSlot.Weapon, view.Card));
+                    return;
+                }
+            }
         }
 
         private void RefreshEquipment(GameState state)
@@ -113,6 +159,7 @@ namespace Struikrovers.Presentation
             {
                 CardView card = Instantiate(cardPrefab, handContainer);
                 card.Setup(theme, detail);
+                Listen(card);
                 handCards.Add(card);
             }
 

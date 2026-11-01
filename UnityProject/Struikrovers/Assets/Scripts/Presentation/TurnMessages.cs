@@ -172,6 +172,14 @@ namespace Struikrovers.Presentation
                         return new TurnMessage(clue, clue);
                     }
 
+                case TurnEventKind.EquipmentMoved:
+                    {
+                        string line =
+                            $"Player {e.Team + 1} moved {e.Card.Name} from their {e.Actor.BaseType} " +
+                            $"to their {e.Target.BaseType}.";
+                        return new TurnMessage(null, line);
+                    }
+
                 default:
                     return new TurnMessage(null);
             }
@@ -229,6 +237,22 @@ namespace Struikrovers.Presentation
                 case PrimaryAction.MoveBandit: return "Move Bandit";
                 case PrimaryAction.Roll: return "Roll Movement";
                 default: return "Choose a highlighted tile";
+            }
+        }
+
+        /// Text of one entry in the menu for an equipped item.
+        public static string GetManageLabel(ManageOption option, Pawn pawn, EquipmentSlot slot)
+        {
+            switch (option.Kind)
+            {
+                case ManageKind.MoveEquipment:
+                    return $"Move to the {option.Target.BaseType}";
+
+                case ManageKind.SwapEquipment:
+                    return $"Swap with the {option.Target.BaseType}'s {option.Target.Equipment.Get(slot).Name}";
+
+                default:
+                    return $"Discard {pawn.Equipment.Get(slot).Name}";
             }
         }
 

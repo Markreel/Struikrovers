@@ -23,7 +23,7 @@ namespace Struikrovers.Presentation
                 return;
 
             panel.SetActive(true);
-            background.color = Color.Lerp(theme.GetCardColor(card.Kind), Color.black, 0.55f);
+            background.color = Color.Lerp(theme.GetCardColor(card), Color.black, 0.1f);
 
             titleLabel.text = card.Name;
             subtitleLabel.text = DescribeKind(card);

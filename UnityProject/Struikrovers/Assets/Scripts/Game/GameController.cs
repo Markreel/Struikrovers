@@ -1,6 +1,7 @@
 using UnityEngine;
 using Struikrovers.Core;
 using Struikrovers.Presentation;
+using System.Collections.Generic;
 
 namespace Struikrovers.Game
 {
@@ -20,6 +21,7 @@ namespace Struikrovers.Game
         [SerializeField] private DiscardBrowserView discardBrowser;
         [SerializeField] private CardDetailView cardDetail;
         [SerializeField] private EventLogView eventLog;
+        [SerializeField] private CardMenuView cardMenu;
         [SerializeField] private PrivacyOverlayView privacyOverlay;
 
         [Header("Map")]
@@ -34,6 +36,10 @@ namespace Struikrovers.Game
         [SerializeField] private bool hideEnemyBandits = false;
         [Tooltip("Show a 'pass the device' screen at the start of every team's turn. Turn it off for solo testing.")]
         [SerializeField] private bool usePrivacyOverlay = true;
+
+        [Tooltip("Pressing space on the 'pass the device' screen clicks Reveal. Handy for testing. " +
+         "Turn it off if a double press might reveal the next hand by accident.")]
+        [SerializeField] private bool spaceRevealsOverlay = true;
 
         [Header("Debug")]
         [Tooltip("1-6 makes every die roll (movement and fights) this number. 0 = normal random die. " +
@@ -62,6 +68,9 @@ namespace Struikrovers.Game
             if (promptView != null) promptView.OptionChosen += OnPromptChosen;
             if (piles != null) piles.DiscardClicked += OnDiscardClicked;
             if (privacyOverlay != null) privacyOverlay.RevealClicked += OnRevealClicked;
+            if (playerPanels != null)
+                foreach (PlayerPanelView panel in playerPanels)
+                    if (panel != null) panel.CardClicked += OnCardClicked;
             if (input != null) input.PrimaryPressed += OnPrimary;
         }
 
@@ -130,6 +139,7 @@ namespace Struikrovers.Game
             if (piles != null) piles.Initialize(theme, cardDetail);
             if (discardBrowser != null) { discardBrowser.Initialize(theme, cardDetail); discardBrowser.Hide(); }
             if (cardDetail != null) cardDetail.Hide();
+            if (cardMenu != null) cardMenu.Hide();
             if (eventLog != null) eventLog.Clear();
 
             turn = new TurnManager(state, deckSettings);
@@ -167,7 +177,16 @@ namespace Struikrovers.Game
         // Space does nothing while the overlay is up, so a double press can't reveal the next hand.
         private void OnPrimary()
         {
-            if (!InputBlocked) turn?.OnPrimaryButton();
+            if (InputBlocked)
+            {
+                // The overlay covers the buttons, so this is the space bar.
+                if (spaceRevealsOverlay)
+                    OnRevealClicked();
+
+                return;
+            }
+
+            turn?.OnPrimaryButton();
         }
 
         private void OnCancel()
@@ -206,6 +225,53 @@ namespace Struikrovers.Game
             Refresh();
         }
 
+        private void OnCardClicked(CardClick click)
+        {
+            if (turn == null || cardMenu == null || InputBlocked)
+                return;
+
+            // Only the player whose turn it is can manage cards, and not while a question is open.
+            if (click.Team != turn.TurnOwner || !turn.CanManage)
+                return;
+
+            var entries = new List<CardMenuEntry>();
+
+            if (click.IsHand)
+            {
+                int index = click.HandIndex;
+                CardDefinition card = click.Card;
+
+                entries.Add(new CardMenuEntry(
+                    $"Discard {card.Name}",
+                    () => turn.DiscardHandCard(click.Team, index, card)));
+            }
+            else
+            {
+                Pawn pawn = state.GetPawnByRole(click.Team, click.Role);
+                if (pawn == null)
+                    return;
+
+                EquipmentSlot slot = click.Slot;
+
+                foreach (ManageOption option in turn.Cards.GetEquipmentOptions(pawn, slot))
+                {
+                    ManageOption chosen = option;
+
+                    entries.Add(new CardMenuEntry(
+                        TurnMessages.GetManageLabel(chosen, pawn, slot),
+                        () =>
+                        {
+                            if (chosen.Kind == ManageKind.DiscardEquipment)
+                                turn.DiscardEquipment(pawn, slot);
+                            else
+                                turn.MoveEquipment(pawn, slot, chosen.Target);
+                        }));
+                }
+            }
+
+            cardMenu.Show(click.Card.Name, click.Card.Text, entries);
+        }
+
         // ---- Output to the views ----
 
         private void OnTurnEvent(TurnEvent e)
@@ -236,6 +302,8 @@ namespace Struikrovers.Game
             ITurnState step = turn?.CurrentState;
             if (step == null)
                 return;
+
+            if (cardMenu != null) cardMenu.Hide();
 
             VisualTheme theme = boardView.Theme;
             int owner = turn.TurnOwner;
