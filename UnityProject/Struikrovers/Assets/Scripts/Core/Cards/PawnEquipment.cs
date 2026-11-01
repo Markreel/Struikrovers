@@ -40,5 +40,9 @@ namespace Struikrovers.Core
                 return total;
             }
         }
+
+        /// True when this card (by id) is equipped in either slot. For effects that check for an item.
+        public bool Has(string cardId) =>
+            (clothing != null && clothing.Id == cardId) || (weapon != null && weapon.Id == cardId);
     }
 }

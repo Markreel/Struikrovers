@@ -135,8 +135,26 @@ namespace Struikrovers.Core
 
         internal void Equip(Pawn pawn, CardDefinition card)
         {
+            CardDefinition old = Unequip(pawn, card.Slot);
+            if (old != null)
+                Discard(pawn.Team, old);
+
             pawn.Equipment.Set(card.Slot, card);
+            EquipmentEffects.Get(card)?.OnEquipped(pawn, card);
             raise(TurnEvent.CardEquipped(pawn, card));
+        }
+
+        /// Takes the item out of the slot, runs its cleanup and returns it. It does not discard it:
+        /// the caller decides where it goes (discard pile, another player's pawn...).
+        internal CardDefinition Unequip(Pawn pawn, EquipmentSlot slot)
+        {
+            CardDefinition card = pawn.Equipment.Get(slot);
+            if (card == null)
+                return null;
+
+            EquipmentEffects.Get(card)?.OnUnequipped(pawn, card);
+            pawn.Equipment.Set(slot, null);
+            return card;
         }
 
         /// Pawn-specific items only fit their own pawn. General items fit every pawn.

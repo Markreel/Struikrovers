@@ -115,7 +115,6 @@ namespace Struikrovers.Core
         private readonly CardSystem cards;
         private readonly Pawn pawn;
         private readonly CardDefinition newCard;
-        private readonly CardDefinition oldCard;
 
         public ReplaceEquipmentPrompt(
             CardSystem cards, int team, Pawn pawn, CardDefinition newCard, CardDefinition oldCard)
@@ -131,14 +130,13 @@ namespace Struikrovers.Core
             this.cards = cards;
             this.pawn = pawn;
             this.newCard = newCard;
-            this.oldCard = oldCard;
         }
 
         public override DecisionPrompt Choose(int index)
         {
             if (index == 0)
             {
-                cards.Discard(Team, oldCard);
+                // Equip takes the old item off and puts it on the discard pile.
                 cards.Equip(pawn, newCard);
             }
             else

@@ -170,10 +170,15 @@ namespace Struikrovers.Presentation
         private static string TypeName(Pawn pawn) =>
     pawn.Type == PawnType.Bandit ? "Bandit" : "Squire";
 
+        private static string RollText(int die, int modifier) =>
+    modifier == 0 ? die.ToString() : $"{die + modifier} ({die}{modifier:+0;-0})";
+
         private static string DescribeFight(FightResult f)
         {
-            string rolls = $"{f.AttackerRoll} vs {f.DefenderRoll}" +
-                           (f.Rerolls > 0 ? $", after {f.Rerolls} tie(s)" : "");
+            FightRoll r = f.Roll;
+            string rolls =
+                $"{RollText(r.AttackerDie, r.AttackerModifier)} vs {RollText(r.DefenderDie, r.DefenderModifier)}" +
+                (r.Rerolls > 0 ? $", after {r.Rerolls} tie(s)" : "");
 
             string text =
                 $"A fight broke out at tile ({f.Position.x}, {f.Position.y})! " +
