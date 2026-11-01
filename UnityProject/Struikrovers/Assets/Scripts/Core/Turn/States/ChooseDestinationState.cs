@@ -99,10 +99,14 @@ namespace Struikrovers.Core
             Pawn.Position = tile;
             Turn.RolledMovement = Mathf.Max(0, Turn.RolledMovement - steps);
 
-            if (Turn.RolledMovement == 0)
-                Turn.CompleteMovement();
-            else
-                Turn.ChangeState(new ChooseDestinationState(Turn));
+            // Stolen equipment is resolved first (prompts), then the move continues.
+            Turn.RunPending(() =>
+            {
+                if (Turn.RolledMovement == 0)
+                    Turn.CompleteMovement();
+                else
+                    Turn.ChangeState(new ChooseDestinationState(Turn));
+            });
         }
 
         private void FightThroughPath(BlockedPath path)
@@ -124,7 +128,7 @@ namespace Struikrovers.Core
 
             // Every blocker is beaten: the Squire ends on the tile it clicked.
             Pawn.Position = path.Destination;
-            Turn.CompleteMovement();
+            Turn.RunPending(Turn.CompleteMovement);
         }
     }
 }

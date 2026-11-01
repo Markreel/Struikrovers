@@ -232,7 +232,7 @@ namespace Struikrovers.Core
             }
 
             ResolveDelivery(pawn);
-            EndMovement();
+            RunPending(EndMovement);
         }
 
         /// Movement is done: a rescue run ends here, every other pawn gets its action.
@@ -271,7 +271,7 @@ namespace Struikrovers.Core
                 pendingRescueRuns.Enqueue(royalty);
 
             IsRescueRun = true;
-            StartNextRescueRun();
+            RunPending(StartNextRescueRun);
         }
 
         // ---- Turn order ----
