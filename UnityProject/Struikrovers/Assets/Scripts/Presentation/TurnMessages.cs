@@ -289,6 +289,18 @@ namespace Struikrovers.Presentation
             }
         }
 
+        /// "Keep result" only makes sense while you could still play a roll card. Otherwise it is just "Continue".
+        public static string GetPrimaryLabel(TurnManager turn, ITurnState step)
+        {
+            if (step.Primary == PrimaryAction.KeepResult && !turn.RollCardAvailable)
+                return "Continue";
+
+            return GetPrimaryLabel(step.Primary);
+        }
+
+        public static string GetFighterCaption(Pawn pawn, bool attacker) =>
+            $"{TypeName(pawn)} {(attacker ? "attacks" : "defends")}";
+
         private static string DescribeDice(DiceRoll roll)
         {
             var parts = new List<string>();
@@ -385,10 +397,14 @@ namespace Struikrovers.Presentation
                 case FightPauseState pause:
                     {
                         PendingFight f = pause.Fight;
-                        message += $" | Fight! {f.AttackerTotal} vs {f.DefenderTotal}. ";
-                        message += f.CanRerollTie ? "It's a tie: click Reroll tie." : "Click Keep result to continue.";
+                        bool canPlay = turn.RollCardAvailable;
 
-                        if (turn.RollCardAvailable)
+                        message += $" | Fight! {f.AttackerTotal} vs {f.DefenderTotal}. ";
+
+                        if (f.CanRerollTie) message += "It's a tie: click Reroll tie.";
+                        else message += canPlay ? "Click Keep result to continue." : "Click Continue.";
+
+                        if (canPlay)
                             message += " You can play Reroll or Double Roll by clicking the card in your hand.";
 
                         break;

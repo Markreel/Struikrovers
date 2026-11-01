@@ -12,6 +12,7 @@ GameObject:
   - component: {fileID: 7499501882703229800}
   - component: {fileID: 8268502949140532401}
   - component: {fileID: 5153355710685668188}
+  - component: {fileID: 2442943115527137534}
   m_Layer: 5
   m_Name: Card
   m_TagString: Untagged
@@ -95,6 +96,22 @@ MonoBehaviour:
   nameLabel: {fileID: 9073538699210658844}
   modifierLabel: {fileID: 3043274278328627648}
   placeholderLabel: {fileID: 7491559259182188732}
+  playableGlow: {fileID: 2442943115527137534}
+--- !u!114 &2442943115527137534
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1065910460596033544}
+  m_Enabled: 0
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e19747de3f5aca642ab2be37e372fb86, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Outline
+  m_EffectColor: {r: 0, g: 0, b: 0, a: 0.5}
+  m_EffectDistance: {x: 1, y: -1}
+  m_UseGraphicAlpha: 1
 --- !u!1 &1651489215120403928
 GameObject:
   m_ObjectHideFlags: 0

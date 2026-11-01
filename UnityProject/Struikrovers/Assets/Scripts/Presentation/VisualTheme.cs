@@ -61,6 +61,18 @@ namespace Struikrovers.Presentation
         [SerializeField] private Color banditEquipment = new Color(0.25f, 0.65f, 0.30f);    // green
         [SerializeField] private Color generalEquipment = new Color(0.80f, 0.25f, 0.75f);   // magenta
 
+        [Header("Dice")]
+        [Tooltip("Face sprites. Index = value - 1, so a 3 is Element 2 and a 6 is Element 5. Missing = number on a square.")]
+        [SerializeField] private Sprite[] dieFaces = new Sprite[6];
+        [SerializeField] private Color diceNormal = Color.white;
+        [SerializeField] private Color diceAdvantage = new Color(0.45f, 0.85f, 0.45f);
+        [SerializeField] private Color diceDisadvantage = new Color(0.90f, 0.35f, 0.35f);
+        [SerializeField] private Color diceDouble = new Color(0.95f, 0.78f, 0.25f);
+        [SerializeField] private Color diceReroll = new Color(0.45f, 0.65f, 0.95f);
+        [SerializeField] private float diceRollDuration = 0.6f;
+        [SerializeField] private float diceFaceInterval = 0.06f;
+        [SerializeField, Range(0f, 1f)] private float discardedDieAlpha = 0.45f;
+        [SerializeField] private Color playableGlow = new Color(1f, 0.95f, 0.4f);
 
         [Header("Pawn sprites (optional, falls back to Resources/StruikroversIcons)")]
         [SerializeField] private Sprite badge;
@@ -82,6 +94,10 @@ namespace Struikrovers.Presentation
         public Color BlockedDestinationColor => blockedDestination;
         public Color CardBackColor => cardBack;
         public Color EmptySlotColor => emptySlot;
+        public float DiceRollDuration => diceRollDuration;
+        public float DiceFaceInterval => diceFaceInterval;
+        public float DiscardedDieAlpha => discardedDieAlpha;
+        public Color PlayableGlowColor => playableGlow;
 
 
         // ---- Actions ----
@@ -147,6 +163,22 @@ namespace Struikrovers.Presentation
                 case TerrainType.LootBush: color = lootBushGlow; return true;
                 default: color = Color.clear; return false;
             }
+        }
+
+        // ---- Dice ----
+
+        public Sprite GetDieFace(int value) =>
+    dieFaces != null && value >= 1 && value <= dieFaces.Length ? dieFaces[value - 1] : null;
+
+        /// Advantage and disadvantage win. Otherwise the extra die of a Double Roll is gold, and a
+        /// rerolled roll is blue. The info line next to the dice lists every effect.
+        public Color GetDieColor(DiceRoll roll, int dieIndex)
+        {
+            if (roll.Mode == RollMode.Disadvantage) return diceDisadvantage;
+            if (roll.Mode == RollMode.Advantage) return diceAdvantage;
+            if (roll.Doubled && dieIndex > 0) return diceDouble;
+            if (roll.Rerolled) return diceReroll;
+            return diceNormal;
         }
 
         // ---- Pawns ----

@@ -54,6 +54,7 @@ namespace Struikrovers.Game
         private string clue = "";
         private int revealedTeam = -1;
         private int lastLoggedOwner = -1;
+        private bool wasAnimating;
 
         private bool OverlayActive => usePrivacyOverlay && privacyOverlay != null;
         private bool InputBlocked => OverlayActive && privacyOverlay.IsVisible;
@@ -96,6 +97,80 @@ namespace Struikrovers.Game
         private void Start() => Reload();
 
         private void OnDestroy() => DetachTurn();
+
+        private void Update()
+        {
+            bool animating = DiceAnimating;
+            if (wasAnimating && !animating)
+                Refresh();
+
+            wasAnimating = animating;
+        }
+
+        private bool DiceAnimating
+        {
+            get
+            {
+                if (playerPanels == null)
+                    return false;
+
+                foreach (PlayerPanelView panel in playerPanels)
+                    if (panel != null && panel.Dice != null && panel.Dice.IsAnimating)
+                        return true;
+
+                return false;
+            }
+        }
+
+        private void ClearDice()
+        {
+            if (playerPanels == null)
+                return;
+
+            foreach (PlayerPanelView panel in playerPanels)
+                if (panel != null && panel.Dice != null)
+                    panel.Dice.Clear();
+        }
+
+        private void ShowRoll(int team, DiceRoll roll, string caption, int modifier)
+        {
+            if (roll == null || playerPanels == null || team < 0 || team >= playerPanels.Length)
+                return;
+
+            PlayerPanelView panel = playerPanels[team];
+            if (panel != null && panel.Dice != null)
+                panel.Dice.ShowRoll(roll, caption, modifier);
+        }
+
+        // Dice come from the roll events. A fight that resolves without a pause (ConfirmFightRolls off)
+        // shows its dice from the result events. Showing the same roll twice doesn't re-animate it.
+        private void ShowDice(TurnEvent e)
+        {
+            switch (e.Kind)
+            {
+                case TurnEventKind.DiceRolled:
+                    ShowRoll(e.Team, e.Dice, "Movement", 0);
+                    break;
+
+                case TurnEventKind.FightRolled:
+                    ShowRoll(e.Actor.Team, e.Dice,
+                        TurnMessages.GetFighterCaption(e.Actor, true), e.Amount - e.Dice.Total);
+                    ShowRoll(e.Target.Team, e.OtherDice,
+                        TurnMessages.GetFighterCaption(e.Target, false), e.SecondAmount - e.OtherDice.Total);
+                    break;
+
+                case TurnEventKind.BanditFight:
+                case TurnEventKind.SquireFight:
+                    {
+                        FightRoll roll = e.Fight.Roll;
+                        ShowRoll(e.Fight.Attacker.Team, roll.AttackerDice,
+                            TurnMessages.GetFighterCaption(e.Fight.Attacker, true), roll.AttackerModifier);
+                        ShowRoll(e.Fight.Defender.Team, roll.DefenderDice,
+                            TurnMessages.GetFighterCaption(e.Fight.Defender, false), roll.DefenderModifier);
+                        break;
+                    }
+            }
+        }
 
         [ContextMenu("Reload Board")]
         public void Reload()
@@ -190,6 +265,9 @@ namespace Struikrovers.Game
                 return;
             }
 
+            if (turn != null && turn.CurrentState is FightPauseState && DiceAnimating)
+                return;
+
             turn?.OnPrimaryButton();
         }
 
@@ -232,6 +310,9 @@ namespace Struikrovers.Game
         private void OnCardClicked(CardClick click)
         {
             if (turn == null || cardMenu == null || InputBlocked)
+                return;
+
+            if (DiceAnimating)
                 return;
 
             // Only the player whose turn it is can use cards.
@@ -298,6 +379,7 @@ namespace Struikrovers.Game
 
         private void OnTurnEvent(TurnEvent e)
         {
+            ShowDice(e);
             TurnMessage message = TurnMessages.Describe(e, state);
 
             if (message.Clue != null)
@@ -324,6 +406,10 @@ namespace Struikrovers.Game
             ITurnState step = turn?.CurrentState;
             if (step == null)
                 return;
+
+            // A new activation starts without dice from the last one.
+            if (step is AwaitRollState)
+                ClearDice();
 
             if (cardMenu != null) cardMenu.Hide();
 
@@ -358,7 +444,12 @@ namespace Struikrovers.Game
                         continue;
 
                     bool handFaceUp = i == owner && !needsReveal;
-                    playerPanels[i].Refresh(state, turn.Cards.MaxHandSize, handFaceUp, i == turn.CurrentTeam);
+                    int panelTeam = i;
+                    System.Predicate<CardDefinition> playable = handFaceUp && !DiceAnimating
+                        ? card => turn.CanPlayHandCard(panelTeam, card, out _)
+                        : (System.Predicate<CardDefinition>)null;
+
+                    playerPanels[i].Refresh(state, turn.Cards.MaxHandSize, handFaceUp, i == turn.CurrentTeam, playable);
                 }
             }
 
@@ -382,7 +473,7 @@ namespace Struikrovers.Game
             hud.Show(
                 TurnMessages.BuildStatus(turn, clue),
                 theme.GetStatusBackground(turn.CurrentTeam),
-                prompt != null ? "Choose an option in the panel" : TurnMessages.GetPrimaryLabel(step.Primary),
+                prompt != null ? "Choose an option in the panel" : TurnMessages.GetPrimaryLabel(turn, step),
                 step.Primary != PrimaryAction.None,
                 step.CanCancel,
                 step.AvailableActionGroups,

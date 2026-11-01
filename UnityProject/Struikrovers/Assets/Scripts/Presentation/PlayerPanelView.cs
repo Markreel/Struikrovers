@@ -29,7 +29,8 @@ namespace Struikrovers.Presentation
         [SerializeField] private CardView[] curseSlots;
         [SerializeField] private RectTransform handContainer;
         [SerializeField] private CardView cardPrefab;
-
+        [SerializeField] private DiceStripView diceStrip;
+        public DiceStripView Dice => diceStrip;
         private readonly List<CardView> handCards = new List<CardView>();
         private VisualTheme theme;
         private CardDetailView detail;
@@ -63,9 +64,12 @@ namespace Struikrovers.Presentation
                 card.Setup(theme, detail);
                 Listen(card);
             }
+
+            if (diceStrip != null)
+                diceStrip.Initialize(theme);
         }
 
-        public void Refresh(GameState state, int maxHandSize, bool handFaceUp, bool isActive)
+        public void Refresh(GameState state, int maxHandSize, bool handFaceUp, bool isActive, Predicate<CardDefinition> isPlayable = null)
         {
             TeamState stats = state.Teams[team];
 
@@ -76,7 +80,7 @@ namespace Struikrovers.Presentation
 
             RefreshEquipment(state);
             RefreshCurses(stats);
-            RefreshHand(stats, handFaceUp);
+            RefreshHand(stats, handFaceUp, isPlayable);
         }
 
         // Unsubscribing first means Initialize can run again (reload) without double clicks.
@@ -152,7 +156,7 @@ namespace Struikrovers.Presentation
             }
         }
 
-        private void RefreshHand(TeamState stats, bool faceUp)
+        private void RefreshHand(TeamState stats, bool faceUp, Predicate<CardDefinition> isPlayable)
         {
             IReadOnlyList<CardDefinition> hand = stats.Hand;
 
@@ -170,7 +174,10 @@ namespace Struikrovers.Presentation
                 handCards[i].gameObject.SetActive(used);
 
                 if (used)
+                {
                     handCards[i].ShowCard(hand[i], faceUp);
+                    handCards[i].SetPlayable(faceUp && isPlayable != null && isPlayable(hand[i]));
+                }
             }
         }
     }

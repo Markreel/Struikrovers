@@ -16,6 +16,8 @@ namespace Struikrovers.Presentation
         [SerializeField] private TMP_Text nameLabel;
         [SerializeField] private TMP_Text modifierLabel;
         [SerializeField] private TMP_Text placeholderLabel;
+        [SerializeField] private Outline playableGlow;
+        private bool glowing;
 
         private VisualTheme theme;
         private CardDetailView detail;
@@ -59,6 +61,8 @@ namespace Struikrovers.Presentation
 
         private void ShowPlaceholder(Color color, string text)
         {
+            SetPlayable(false);
+
             Card = null;
             background.color = color;
 
@@ -103,6 +107,25 @@ namespace Struikrovers.Presentation
 
             if (Card != null) detail.Show(Card, theme);
             else detail.Hide();
+        }
+
+        public void SetPlayable(bool value)
+        {
+            glowing = value;
+
+            if (playableGlow != null)
+                playableGlow.enabled = value;
+        }
+
+        private void Update()
+        {
+            if (!glowing || playableGlow == null || theme == null)
+                return;
+
+            float pulse = (Mathf.Sin(Time.unscaledTime * 4f) + 1f) / 2f;
+            Color color = theme.PlayableGlowColor;
+            color.a = Mathf.Lerp(0.35f, 1f, pulse);
+            playableGlow.effectColor = color;
         }
     }
 }
