@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using static Struikrovers.Core.DeckSettings;
 
 namespace Struikrovers.Core
 {
@@ -455,6 +456,43 @@ namespace Struikrovers.Core
         {
             pawn.Equipment.Set(card.Slot, card);
             EquipmentEffects.Get(card)?.OnEquipped(pawn, card);
+        }
+
+        /// Plays a hand card: it goes face up onto the discard pile. 'expected' guards against a stale index.
+        internal bool PlayCard(int team, int index, CardDefinition expected)
+        {
+            List<CardDefinition> hand = state.Teams[team].hand;
+            if (index < 0 || index >= hand.Count || hand[index] != expected)
+                return false;
+
+            discardPile.Add(RemoveFromHand(team, index));
+            raise(TurnEvent.CardPlayed(team, expected));
+            return true;
+        }
+
+        /// Debug: puts the curses from the deck settings on their teams before the game starts.
+        internal void ApplyDebugCurses()
+        {
+            if (settings.debugCurses == null)
+                return;
+
+            foreach (DebugCurse entry in settings.debugCurses)
+            {
+                if (entry == null)
+                    continue;
+
+                CardDefinition card = CardCatalog.Find(entry.cardId);
+                if (card == null || card.Kind != CardKind.Curse ||
+                    entry.team < 0 || entry.team >= state.TeamCount)
+                {
+                    UnityEngine.Debug.LogWarning($"DeckSettings: invalid debug curse '{entry.cardId}' for team {entry.team}.");
+                    continue;
+                }
+
+                List<CardDefinition> curses = state.Teams[entry.team].curses;
+                if (curses.Count < GameConfig.MaxCurses && !curses.Contains(card))
+                    curses.Add(card);
+            }
         }
 
         /// Pawn-specific items only fit their own pawn. General items fit every pawn.

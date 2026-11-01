@@ -5,7 +5,7 @@ namespace Struikrovers.Core
 {
     /// What the main button does in a state. None means the button is disabled
     /// and the player has to click a highlighted tile.
-    public enum PrimaryAction { None, Roll, MoveBandit, Finish }
+    public enum PrimaryAction { None, Roll, MoveBandit, Finish, KeepResult, RerollTie }
 
     public interface ITurnState
     {

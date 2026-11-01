@@ -9,6 +9,9 @@ namespace Struikrovers.Core
         public override PrimaryAction Primary =>
             Pawn.Type == PawnType.Bandit ? PrimaryAction.MoveBandit : PrimaryAction.Roll;
 
+        // A new activation starts without an open roll.
+        public override void Enter() => Turn.ClearMovementRoll();
+
         public override void OnPrimaryButton()
         {
             switch (Pawn.Type)
@@ -28,13 +31,15 @@ namespace Struikrovers.Core
                     break;
 
                 default:
-                    Turn.RolledMovement = Turn.RollMovementDie();
+                    // The roll stays open until the player picks a move, so cards can change it.
+                    Turn.BeginMovementRoll(Turn.Dice.Roll(Pawn, RollKind.Movement));
 
                     // A freed Royalty that is boxed in on its hiding place cannot run.
                     // It is placed on the nearest free grass tile instead.
                     if (Turn.IsRescueRun && Pawn.Type == PawnType.Royalty &&
                         Turn.Movement.GetDestinations(Pawn, Turn.RolledMovement).Count == 0)
                     {
+                        Turn.CloseMovementRoll();
                         Turn.RescueRules.PlaceNearest(Pawn);
                         Turn.Raise(TurnEvent.RescueRunBlocked(Pawn));
                         Turn.EndMovement(); // a rescue run has no action, so this ends the run

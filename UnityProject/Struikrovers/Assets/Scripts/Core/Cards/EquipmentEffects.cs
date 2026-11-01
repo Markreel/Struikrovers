@@ -22,6 +22,9 @@ namespace Struikrovers.Core
 
         /// True when the wearer may take looted cards from the top of the discard pile.
         bool OffersDiscardPick(Pawn looter, CardDefinition card);
+
+        /// True when this item gives the wearer advantage on this kind of roll.
+        bool GrantsAdvantage(Pawn wearer, CardDefinition card, RollKind kind);
     }
 
     /// Base class with do-nothing defaults, so an effect only overrides what it needs.
@@ -33,6 +36,7 @@ namespace Struikrovers.Core
         public virtual bool PreventsAmbush(Pawn victim, Pawn bandit, CardDefinition card) => false;
         public virtual bool PreventsCurse(Pawn wearer, CardDefinition card) => false;
         public virtual bool OffersDiscardPick(Pawn looter, CardDefinition card) => false;
+        public virtual bool GrantsAdvantage(Pawn wearer, CardDefinition card, RollKind kind) => false;
     }
 
     /// The effect of each equipment card, by card id. Cards without an entry only have their
@@ -48,6 +52,9 @@ namespace Struikrovers.Core
             Register("charming-chestplate", new CharmingChestplateEffect());
             Register("warding-amulet", new WardingAmuletEffect());
             Register("gravediggers-spade", new GravediggersSpadeEffect());
+            Register("lucky-loafers", new RollAdvantageEffect(RollKind.Movement));
+            Register("short-swords", new RollAdvantageEffect(RollKind.Combat));
+            Register("bush-blade", new RollAdvantageEffect(RollKind.Combat));
         }
 
         public static void Register(string cardId, IEquipmentEffect effect)
@@ -127,6 +134,22 @@ namespace Struikrovers.Core
             {
                 IEquipmentEffect effect = Get(item);
                 if (effect != null && effect.OffersDiscardPick(looter, item))
+                    return true;
+            }
+
+            return false;
+        }
+
+        public static bool GrantsAdvantage(Pawn pawn, RollKind kind)
+        {
+            // A Bloodhound ignores equipment effects.
+            if (pawn == null || pawn.Type != pawn.BaseType)
+                return false;
+
+            foreach (CardDefinition item in pawn.Equipment.Items)
+            {
+                IEquipmentEffect effect = Get(item);
+                if (effect != null && effect.GrantsAdvantage(pawn, item, kind))
                     return true;
             }
 

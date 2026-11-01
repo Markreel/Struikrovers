@@ -32,6 +32,10 @@ namespace Struikrovers.Core
             Turn.BeginRescueRuns(rescued, false);
         }
 
+        /// The action ends the activation itself (a fight that waits for the dice, for example),
+        /// so the action phase must not finish it a second time.
+        public void TakeOverFlow() => FlowHandled = true;
+
         public bool IsAdjacent(Vector2Int tile) => BoardGrid.IsAdjacent(Actor.Position, tile);
 
         public IEnumerable<Vector2Int> AdjacentTiles()

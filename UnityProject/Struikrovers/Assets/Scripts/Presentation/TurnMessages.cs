@@ -1,4 +1,5 @@
 using Struikrovers.Core;
+using System.Collections.Generic;
 
 namespace Struikrovers.Presentation
 {
@@ -192,6 +193,24 @@ namespace Struikrovers.Presentation
                     return new TurnMessage(null,
                         $"Player {e.Team + 1} took {e.Card.Name} from the discard pile.");
 
+                case TurnEventKind.DiceRolled:
+                    return new TurnMessage(null,
+                        $"Player {e.Team + 1}'s {e.Actor.BaseType} rolled {DescribeDice(e.Dice)} for movement.");
+
+                case TurnEventKind.FightRolled:
+                    {
+                        string line =
+                            $"Fight at tile ({e.Target.Position.x}, {e.Target.Position.y}): " +
+                            $"Player {e.Actor.Team + 1}'s {TypeName(e.Actor)} rolled {DescribeDice(e.Dice)}, " +
+                            $"Player {e.Target.Team + 1}'s {TypeName(e.Target)} rolled {DescribeDice(e.OtherDice)}. " +
+                            $"Totals with modifiers: {e.Amount} vs {e.SecondAmount}" +
+                            (e.Amount == e.SecondAmount ? " - a tie!" : ".");
+                        return new TurnMessage(null, line);
+                    }
+
+                case TurnEventKind.CardPlayed:
+                    return new TurnMessage(null, $"Player {e.Team + 1} played {e.Card.Name}.");
+
                 default:
                     return new TurnMessage(null);
             }
@@ -248,6 +267,8 @@ namespace Struikrovers.Presentation
                 case PrimaryAction.Finish: return "Finish Activation";
                 case PrimaryAction.MoveBandit: return "Move Bandit";
                 case PrimaryAction.Roll: return "Roll Movement";
+                case PrimaryAction.KeepResult: return "Keep result";
+                case PrimaryAction.RerollTie: return "Reroll tie";
                 default: return "Choose a highlighted tile";
             }
         }
@@ -266,6 +287,27 @@ namespace Struikrovers.Presentation
                 default:
                     return $"Discard {pawn.Equipment.Get(slot).Name}";
             }
+        }
+
+        private static string DescribeDice(DiceRoll roll)
+        {
+            var parts = new List<string>();
+
+            foreach (DieResult die in roll.Dice)
+            {
+                if (!die.HasOther)
+                    parts.Add(die.Kept.ToString());
+                else if (roll.Mode == RollMode.Advantage)
+                    parts.Add($"{die.Kept} (best of {die.Kept} and {die.Other})");
+                else
+                    parts.Add($"{die.Kept} (worst of {die.Kept} and {die.Other})");
+            }
+
+            string text = string.Join(" + ", parts);
+            if (roll.Dice.Count > 1) text += " = " + roll.Total;
+            if (roll.Doubled) text += ", double roll";
+            if (roll.Rerolled) text += ", rerolled";
+            return text;
         }
 
         public static string BuildStatus(TurnManager turn, string clue)
@@ -312,6 +354,9 @@ namespace Struikrovers.Presentation
 
                     if (step.BlockedDestinations.Count > 0)
                         message += " Dark red tiles are behind enemy Squires: click one to fight your way there.";
+
+                    if (turn.MovementRollOpen && turn.RollCardAvailable)
+                        message += " You can still play Reroll or Double Roll (click the card in your hand).";
                     break;
 
                 case BloodhoundAttackState _:
@@ -336,6 +381,18 @@ namespace Struikrovers.Presentation
                 case PromptState _:
                     message += " | Make a choice in the panel.";
                     break;
+
+                case FightPauseState pause:
+                    {
+                        PendingFight f = pause.Fight;
+                        message += $" | Fight! {f.AttackerTotal} vs {f.DefenderTotal}. ";
+                        message += f.CanRerollTie ? "It's a tie: click Reroll tie." : "Click Keep result to continue.";
+
+                        if (turn.RollCardAvailable)
+                            message += " You can play Reroll or Double Roll by clicking the card in your hand.";
+
+                        break;
+                    }
 
                 default: // AwaitRollState
                     message += pawn.Type == PawnType.Bandit

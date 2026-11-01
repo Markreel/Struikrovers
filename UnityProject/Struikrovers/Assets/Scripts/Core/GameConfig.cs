@@ -50,6 +50,17 @@ namespace Struikrovers.Core
         /// Safety net so a forced die can never loop forever. After this many ties the defender wins.
         public const int MaxFightRerolls = 100;
 
+        // ---- Cards ----
+
+        /// Hand cards a team may play per turn (the whole team turn, not per pawn).
+        public const int MaxHandCardsPerTurn = 1;
+
+        /// Curses a player can have at once.
+        public const int MaxCurses = 2;
+
+        /// A Reroll or Double Roll repeats its roll up to this many times to avoid a tie.
+        public const int MaxCardRollAttempts = 100;
+
         // ---- Equipment ----
 
         /// Extra cards Greedy Gloves give when the wearer loots a bush.

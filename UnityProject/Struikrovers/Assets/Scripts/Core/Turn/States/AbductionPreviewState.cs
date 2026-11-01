@@ -37,28 +37,37 @@ namespace Struikrovers.Core
             if (!Plan.Destinations.Contains(position))
                 return;
 
+            Pawn bandit = Pawn;
             Pawn royalty = Plan.Royalty;
+            AbductionPlan plan = Plan;
+            Vector2Int destination = position;
 
             // Enemy Squires on the Royalty's tile guard it. The Bandit has to beat them first;
             // losing sends it to its castle and ends the activation.
-            if (!Turn.FightGuards(Pawn, royalty.Position, out List<Pawn> rescued))
+            Turn.FightGuards(bandit, royalty.Position, (survived, rescued) =>
             {
-                if (rescued.Count > 0)
-                    Turn.BeginRescueRuns(rescued, false);
-                else
-                    Turn.FinishActivation();
+                if (!survived)
+                {
+                    if (rescued.Count > 0)
+                        Turn.BeginRescueRuns(rescued, false);
+                    else
+                        Turn.FinishActivation();
 
-                return;
-            }
+                    return;
+                }
 
-            if (!Turn.AbductionRules.CommitPlan(Pawn, Plan, position))
-                return;
+                if (!Turn.AbductionRules.CommitPlan(bandit, plan, destination))
+                {
+                    Turn.ChangeState(new ChooseDestinationState(Turn));
+                    return;
+                }
 
-            Turn.Raise(TurnEvent.Abducted(royalty, Pawn));
+                Turn.Raise(TurnEvent.Abducted(royalty, bandit));
 
-            // The Bandit may end on an occupied hiding place (a fight, with the abducting
-            // penalty) or run straight home (delivery). Then the action phase follows.
-            Turn.CompleteMovement();
+                // The Bandit may end on an occupied hiding place (a fight, with the abducting
+                // penalty) or run straight home (delivery). Then the action phase follows.
+                Turn.CompleteMovement();
+            });
         }
 
         public override void OnCancel()

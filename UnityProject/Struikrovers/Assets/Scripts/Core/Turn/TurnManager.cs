@@ -41,6 +41,7 @@ namespace Struikrovers.Core
         public AmbushRules AmbushRules { get; }
         public CombatRules CombatRules { get; }
         public CardSystem Cards { get; }
+        public DiceService Dice { get; }
 
         public int CurrentTeam { get; private set; }
         /// The team whose turn it is. Unlike CurrentTeam it stays put during a rescue run.
@@ -53,10 +54,23 @@ namespace Struikrovers.Core
         public int RolledMovement { get; internal set; }
         public int BloodhoundMovesRemaining { get; internal set; }
 
+        /// The movement roll of the active pawn. Null for pawns that don't roll (Bandit, Bloodhound).
+        public DiceRoll MovementRoll { get; private set; }
+
+        /// True from the roll until the player commits to a move. Roll cards work in this window.
+        public bool MovementRollOpen { get; private set; }
+
+        /// Hand cards the turn owner has played this turn (see GameConfig.MaxHandCardsPerTurn).
+        public int HandCardsPlayedThisTurn { get; private set; }
+
         /// True while a freed Royalty runs to safety: movement only, no action.
         public bool IsRescueRun { get; private set; }
 
-        /// Replace this to force die results while testing. Used for movement and fights.
+        /// Fights stop after the dice so cards can be played. Off = fights resolve at once,
+        /// with ties rolled again automatically. Handy for solo testing.
+        public bool ConfirmFightRolls { get; set; } = true;
+
+        /// Replace this to force die results while testing. Used for every die.
         public Func<int> DieRoller { get; set; }
 
         /// Raised once after each input has been handled, and once from Start().
@@ -72,11 +86,13 @@ namespace Struikrovers.Core
             State = state;
             Movement = new MovementRules(state);
             Cards = new CardSystem(state, deckSettings, e => Raise(e));
+            Cards.ApplyDebugCurses();
+            Dice = new DiceService(state, () => DieRoller());
             AbductionRules = new AbductionRules(state, Movement, Cards);
             RescueRules = new RescueRules(state, Movement);
             BloodhoundRules = new BloodhoundRules(state, RescueRules);
             AmbushRules = new AmbushRules(state, Cards);
-            CombatRules = new CombatRules(state, RescueRules, Cards, () => DieRoller());
+            CombatRules = new CombatRules(state, RescueRules, Cards, Dice);
 
             DieRoller = () => GameConfig.MovementDie[
                 UnityEngine.Random.Range(0, GameConfig.MovementDie.Length)];
@@ -90,6 +106,7 @@ namespace Struikrovers.Core
             {
                 CurrentTeam = 0;
                 TurnOwner = 0;
+                HandCardsPlayedThisTurn = 0;
                 CurrentSlotIndex = 0;
                 ActivePawn = State.GetPawnForSlot(CurrentTeam, GameConfig.TurnOrder[CurrentSlotIndex]);
                 ChangeState(new AwaitRollState(this));
@@ -135,15 +152,18 @@ namespace Struikrovers.Core
 
         // ---- Managing your own cards (any time during your turn, except while a question is open) ----
 
-        /// True when the turn owner may move or discard cards right now.
+        /// True when the turn owner may discard cards or play hand cards right now.
         public bool CanManage =>
             CurrentState != null && CurrentState.Prompt == null && !Cards.HasPending;
+
+        /// Equipment can't be changed while a fight waits: its modifiers are already counted.
+        public bool CanManageEquipment => CanManage && !(CurrentState is FightPauseState);
 
         public void MoveEquipment(Pawn pawn, EquipmentSlot slot, Pawn target)
         {
             Dispatch(() =>
             {
-                if (CanManage && pawn != null && pawn.Team == TurnOwner)
+                if (CanManageEquipment && pawn != null && pawn.Team == TurnOwner)
                     Cards.MoveEquipment(pawn, slot, target);
             });
         }
@@ -152,7 +172,7 @@ namespace Struikrovers.Core
         {
             Dispatch(() =>
             {
-                if (CanManage && pawn != null && pawn.Team == TurnOwner)
+                if (CanManageEquipment && pawn != null && pawn.Team == TurnOwner)
                     Cards.DiscardEquipment(pawn, slot);
             });
         }
@@ -166,6 +186,149 @@ namespace Struikrovers.Core
             });
         }
 
+        // ---- Playing hand cards ----
+
+        public bool CanPlayHandCard(int team, CardDefinition card, out string reason)
+        {
+            reason = null;
+
+            IHandCardEffect effect = HandCardEffects.Get(card);
+            if (effect == null)
+            {
+                reason = "this card can't be played yet";
+                return false;
+            }
+
+            if (team != TurnOwner)
+            {
+                reason = "it isn't your turn";
+                return false;
+            }
+
+            if (!CanManage)
+            {
+                reason = "answer the question first";
+                return false;
+            }
+
+            if (HandCardsPlayedThisTurn >= GameConfig.MaxHandCardsPerTurn)
+            {
+                reason = "you already played a hand card this turn";
+                return false;
+            }
+
+            return effect.CanPlay(this, out reason);
+        }
+
+        public void PlayHandCard(int team, int index, CardDefinition expected)
+        {
+            Dispatch(() =>
+            {
+                if (!CanPlayHandCard(team, expected, out _))
+                    return;
+
+                if (!Cards.PlayCard(team, index, expected))
+                    return;
+
+                HandCardsPlayedThisTurn++;
+                HandCardEffects.Get(expected).Play(this);
+            });
+        }
+
+        /// True when the turn owner holds a roll card they could play right now (for hints).
+        public bool RollCardAvailable
+        {
+            get
+            {
+                foreach (CardDefinition card in State.Teams[TurnOwner].Hand)
+                    if (HandCardEffects.ChangesRoll(card) && CanPlayHandCard(TurnOwner, card, out _))
+                        return true;
+
+                return false;
+            }
+        }
+
+        // ---- Rolls that cards can change ----
+
+        /// True when the turn owner has a roll of their own that is still open: their movement
+        /// roll before they commit, or the attacker's die in a fight they started.
+        internal bool CanChangeRoll(out string reason)
+        {
+            reason = null;
+
+            if (CurrentState is FightPauseState pause)
+            {
+                if (pause.Fight.Attacker.Team == TurnOwner)
+                    return true;
+
+                reason = "you can only change your own rolls";
+                return false;
+            }
+
+            if (CurrentState is ChooseDestinationState && MovementRollOpen && MovementRoll != null)
+            {
+                if (MovementRoll.Pawn.Team == TurnOwner)
+                    return true;
+
+                reason = "you can only change your own rolls";
+                return false;
+            }
+
+            reason = "there is no roll of yours to change right now";
+            return false;
+        }
+
+        internal void RerollCurrentRoll()
+        {
+            if (CurrentState is FightPauseState pause)
+            {
+                CombatRules.RerollAttacker(pause.Fight);
+                Raise(TurnEvent.FightRolled(pause.Fight));
+                return;
+            }
+
+            MovementRoll = Dice.Reroll(MovementRoll);
+            ApplyMovementRoll();
+        }
+
+        internal void DoubleCurrentRoll()
+        {
+            if (CurrentState is FightPauseState pause)
+            {
+                CombatRules.DoubleAttacker(pause.Fight);
+                Raise(TurnEvent.FightRolled(pause.Fight));
+                return;
+            }
+
+            MovementRoll = Dice.DoubleUp(MovementRoll);
+            ApplyMovementRoll();
+        }
+
+        // The new roll changes how far the pawn can go, so the destinations are worked out again.
+        private void ApplyMovementRoll()
+        {
+            RolledMovement = MovementRoll.Total;
+            Raise(TurnEvent.DiceRolled(MovementRoll));
+            ChangeState(new ChooseDestinationState(this));
+        }
+
+        internal void BeginMovementRoll(DiceRoll roll)
+        {
+            MovementRoll = roll;
+            MovementRollOpen = true;
+            RolledMovement = roll.Total;
+            Raise(TurnEvent.DiceRolled(roll));
+        }
+
+        /// The player has committed to a move: the roll can no longer be changed.
+        internal void CloseMovementRoll() => MovementRollOpen = false;
+
+        internal void ClearMovementRoll()
+        {
+            MovementRoll = null;
+            MovementRollOpen = false;
+        }
+
         // ---- Used by the states and actions ----
 
         internal void ChangeState(ITurnState next)
@@ -174,8 +337,6 @@ namespace Struikrovers.Core
             next.Enter();
             MarkChanged();
         }
-
-        internal int RollMovementDie() => DieRoller();
 
         internal void Raise(TurnEvent turnEvent)
         {
@@ -208,28 +369,81 @@ namespace Struikrovers.Core
                 Raise(TurnEvent.Delivered(bandit, result.Delivered, result.WoodStolen));
         }
 
-        /// A Royalty guarded by enemy Squires can only be abducted after the Bandit beats them.
-        /// Returns true when the Bandit survived (or nothing guarded the tile). When it lost,
-        /// 'rescued' holds Royalty it was carrying that were freed and need a rescue run.
-        internal bool FightGuards(Pawn bandit, Vector2Int tile, out List<Pawn> rescued)
+        // ---- Fights ----
+
+        /// Rolls one fight. With ConfirmFightRolls the game waits on the dice (cards, tie
+        /// rerolls, Keep result). 'onResolved' runs once the fight has been applied.
+        internal void StartFight(Pawn attacker, Pawn defender, FightKind kind, Action<FightResult> onResolved)
         {
-            rescued = new List<Pawn>();
-            List<FightResult> fights = CombatRules.FightSquiresAt(bandit, tile);
-            int blocked = 0;
+            PendingFight fight = CombatRules.Prepare(attacker, defender, kind);
 
-            foreach (FightResult fight in fights)
+            if (!ConfirmFightRolls)
             {
-                Raise(TurnEvent.SquireFight(fight));
-                blocked += fight.Blocked;
-
-                if (fight.Rescued != null)
-                    rescued.AddRange(fight.Rescued);
+                CombatRules.RollOutTies(fight);
+                onResolved(CombatRules.Resolve(fight));
+                return;
             }
 
-            if (blocked > 0)
-                Raise(TurnEvent.AttackBlocked(bandit, blocked));
+            Raise(TurnEvent.FightRolled(fight));
+            ChangeState(new FightPauseState(this, fight, onResolved));
+        }
 
-            return fights.TrueForAll(f => f.AttackerWon);
+        /// Fights every enemy Squire on the tile one after another, until the attacker dies or
+        /// all are beaten. Each fight is announced. 'onDone' gets every result.
+        internal void FightSquiresAt(Pawn attacker, Vector2Int tile, Action<List<FightResult>> onDone)
+        {
+            List<Pawn> opponents = CombatRules.GetSquireOpponents(attacker, tile);
+            var results = new List<FightResult>();
+            int next = 0;
+
+            void FightNext()
+            {
+                if (next >= opponents.Count)
+                {
+                    onDone(results);
+                    return;
+                }
+
+                Pawn opponent = opponents[next++];
+
+                StartFight(attacker, opponent, FightKind.VsSquire, result =>
+                {
+                    results.Add(result);
+                    Raise(TurnEvent.SquireFight(result));
+
+                    // The attacker lost and is back in its castle.
+                    if (!result.AttackerWon)
+                        onDone(results);
+                    else
+                        FightNext();
+                });
+            }
+
+            FightNext();
+        }
+
+        /// A Royalty guarded by enemy Squires can only be abducted after the Bandit beats them.
+        /// 'onDone' gets true when the Bandit survived (or nothing guarded the tile). When it
+        /// lost, 'rescued' holds Royalty it was carrying that were freed and need a rescue run.
+        internal void FightGuards(Pawn bandit, Vector2Int tile, Action<bool, List<Pawn>> onDone)
+        {
+            FightSquiresAt(bandit, tile, results =>
+            {
+                var rescued = new List<Pawn>();
+                int blocked = 0;
+
+                foreach (FightResult fight in results)
+                {
+                    blocked += fight.Blocked;
+                    if (fight.Rescued != null)
+                        rescued.AddRange(fight.Rescued);
+                }
+
+                if (blocked > 0)
+                    Raise(TurnEvent.AttackBlocked(bandit, blocked));
+
+                onDone(results.TrueForAll(f => f.AttackerWon), rescued);
+            });
         }
 
         /// The active pawn has chosen where to stop. A Bandit fights the occupant of its hiding
@@ -239,31 +453,43 @@ namespace Struikrovers.Core
         {
             Pawn pawn = ActivePawn;
 
-            if (pawn.Type == PawnType.Bandit &&
-                CombatRules.TryFightOccupant(pawn, out FightResult fight))
+            if (pawn.Type == PawnType.Bandit && CombatRules.TryGetOccupant(pawn, out Pawn occupant))
             {
                 // A hiding place holds one Bandit, so the arriving Bandit fights the occupant.
-                Raise(TurnEvent.BanditFight(fight));
-
-                if (fight.Blocked > 0)
-                    Raise(TurnEvent.AttackBlocked(pawn, fight.Blocked));
-
-                bool survived = !pawn.AtCastle;
-
-                if (fight.ReleasedCount > 0)
+                StartFight(pawn, occupant, FightKind.VsBandit, fight =>
                 {
-                    // Freed Royalty run to safety first. A surviving Bandit then still gets its action.
-                    BeginRescueRuns(fight.Rescued, survived);
-                    return;
-                }
+                    Raise(TurnEvent.BanditFight(fight));
 
-                if (!survived)
-                {
-                    FinishActivation();
-                    return;
-                }
+                    if (fight.Blocked > 0)
+                        Raise(TurnEvent.AttackBlocked(pawn, fight.Blocked));
+
+                    bool survived = !pawn.AtCastle;
+
+                    if (fight.ReleasedCount > 0)
+                    {
+                        // Freed Royalty run to safety first. A surviving Bandit then still gets its action.
+                        BeginRescueRuns(fight.Rescued, survived);
+                        return;
+                    }
+
+                    if (!survived)
+                    {
+                        FinishActivation();
+                        return;
+                    }
+
+                    FinishMovement(pawn);
+                });
+
+                return;
             }
 
+            FinishMovement(pawn);
+        }
+
+        // Delivery, then stolen equipment is resolved (prompts), then the action phase.
+        private void FinishMovement(Pawn pawn)
+        {
             ResolveDelivery(pawn);
             RunPending(EndMovement);
         }
@@ -366,6 +592,7 @@ namespace Struikrovers.Core
             CurrentSlotIndex = 0;
             CurrentTeam = (CurrentTeam + 1) % State.TeamCount;
             TurnOwner = CurrentTeam;
+            HandCardsPlayedThisTurn = 0;
             ActivateCurrentSlot();
         }
 

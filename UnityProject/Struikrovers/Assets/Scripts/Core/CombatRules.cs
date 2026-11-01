@@ -4,24 +4,29 @@ using UnityEngine;
 
 namespace Struikrovers.Core
 {
-    /// The dice of one fight: each side's final die and modifier, and how many ties were rolled again.
+    /// The dice of one fight: each side's dice and modifier, and how many ties were rolled again.
     public readonly struct FightRoll
     {
-        public readonly int AttackerDie;
+        public readonly DiceRoll AttackerDice;
+        public readonly DiceRoll DefenderDice;
         public readonly int AttackerModifier;
-        public readonly int DefenderDie;
         public readonly int DefenderModifier;
         public readonly int Rerolls;
 
+        /// The sum of the dice, without modifiers.
+        public int AttackerDie => AttackerDice != null ? AttackerDice.Total : 0;
+        public int DefenderDie => DefenderDice != null ? DefenderDice.Total : 0;
         public int AttackerTotal => AttackerDie + AttackerModifier;
         public int DefenderTotal => DefenderDie + DefenderModifier;
         public bool AttackerWon => AttackerTotal > DefenderTotal;
 
-        public FightRoll(int attackerDie, int attackerModifier, int defenderDie, int defenderModifier, int rerolls)
+        public FightRoll(
+            DiceRoll attackerDice, DiceRoll defenderDice,
+            int attackerModifier, int defenderModifier, int rerolls)
         {
-            AttackerDie = attackerDie;
+            AttackerDice = attackerDice;
+            DefenderDice = defenderDice;
             AttackerModifier = attackerModifier;
-            DefenderDie = defenderDie;
             DefenderModifier = defenderModifier;
             Rerolls = rerolls;
         }
@@ -66,22 +71,22 @@ namespace Struikrovers.Core
         }
     }
 
-    /// Squire vs Squire, Bandit vs Squire and Bandit vs Bandit. Both sides roll the die and
-    /// add modifiers, the highest total wins, and a tie is rolled again.
+    /// Squire vs Squire, Bandit vs Squire and Bandit vs Bandit. A fight is rolled first
+    /// (Prepare), can be changed by cards and tie rerolls, and is applied last (Resolve).
     /// The loser dies and goes to its castle.
     public sealed class CombatRules
     {
         private readonly GameState state;
         private readonly RescueRules rescue;
-        private readonly Func<int> rollDie;
         private readonly CardSystem cards;
+        private readonly DiceService dice;
 
-        public CombatRules(GameState state, RescueRules rescue, CardSystem cards, Func<int> rollDie)
+        public CombatRules(GameState state, RescueRules rescue, CardSystem cards, DiceService dice)
         {
             this.state = state;
             this.rescue = rescue;
             this.cards = cards;
-            this.rollDie = rollDie;
+            this.dice = dice;
         }
 
         /// The +N of everything equipped on the pawn. Curses that strip equipment will change
@@ -110,7 +115,7 @@ namespace Struikrovers.Core
             return modifier;
         }
 
-        // ---- Fighting Squires (Squire or Bandit attacker) ----
+        // ---- Who can be fought ----
 
         private static bool CanFightSquires(Pawn pawn) =>
             pawn != null &&
@@ -137,39 +142,96 @@ namespace Struikrovers.Core
             return targets;
         }
 
-        /// Fights every enemy Squire on the tile, one after another, until the attacker dies.
-        public List<FightResult> FightSquiresAt(Pawn attacker, Vector2Int tile)
+        /// The enemy Squires on a tile, in the order they will be fought.
+        public List<Pawn> GetSquireOpponents(Pawn attacker, Vector2Int tile)
         {
-            var results = new List<FightResult>();
-
             if (!CanFightSquires(attacker))
-                return results;
+                return new List<Pawn>();
 
-            List<Pawn> opponents = state.FindAll(p =>
+            return state.FindAll(p =>
                 p.Type == PawnType.Squire && !p.AtCastle &&
                 p.Position == tile && p.Team != attacker.Team);
-
-            foreach (Pawn opponent in opponents)
-            {
-                FightResult result = FightSquires(attacker, opponent);
-                results.Add(result);
-
-                // The attacker lost and is back in its castle.
-                if (!result.AttackerWon)
-                    break;
-            }
-
-            return results;
         }
 
-        /// The defender is a Squire. The attacker is a Squire or a Bandit.
-        public FightResult FightSquires(Pawn attacker, Pawn defender)
+        /// The enemy Bandit already hiding where this Bandit has just arrived.
+        public bool TryGetOccupant(Pawn arriving, out Pawn occupant)
         {
-            Vector2Int spot = defender.Position;
-            FightRoll roll = RollFight(attacker, defender);
+            occupant = null;
 
-            Pawn winner = roll.AttackerWon ? attacker : defender;
-            Pawn loser = roll.AttackerWon ? defender : attacker;
+            if (arriving == null || arriving.Type != PawnType.Bandit || arriving.AtCastle)
+                return false;
+
+            Pawn other = state.GetBanditAt(arriving.Position, arriving);
+            if (other == null || other.Team == arriving.Team)
+                return false;
+
+            occupant = other;
+            return true;
+        }
+
+        // ---- Rolling ----
+
+        /// Rolls both sides' dice. The result is not applied yet.
+        public PendingFight Prepare(Pawn attacker, Pawn defender, FightKind kind)
+        {
+            var fight = new PendingFight(attacker, defender, defender.Position, kind)
+            {
+                AttackerModifier = GetModifier(attacker, defender, true),
+                DefenderModifier = GetModifier(defender, attacker, false)
+            };
+
+            fight.AttackerDice = dice.Roll(attacker, RollKind.Combat);
+            fight.DefenderDice = dice.Roll(defender, RollKind.Combat);
+            return fight;
+        }
+
+        /// A tie: both sides roll again.
+        public void RerollTie(PendingFight fight)
+        {
+            fight.AttackerDice = dice.Roll(fight.Attacker, RollKind.Combat);
+            fight.DefenderDice = dice.Roll(fight.Defender, RollKind.Combat);
+            fight.Rerolls++;
+        }
+
+        /// Without a pause: roll ties again until there is a winner (or the cap is reached).
+        public void RollOutTies(PendingFight fight)
+        {
+            while (fight.CanRerollTie)
+                RerollTie(fight);
+        }
+
+        /// Reroll card: the attacker's die is replaced. A card roll can't create a tie.
+        public void RerollAttacker(PendingFight fight)
+        {
+            fight.AttackerDice = dice.Reroll(
+                fight.AttackerDice, r => r.Total + fight.AttackerModifier == fight.DefenderTotal);
+        }
+
+        /// Double Roll card: a second die is added to the attacker's. It can't create a tie.
+        public void DoubleAttacker(PendingFight fight)
+        {
+            fight.AttackerDice = dice.DoubleUp(
+                fight.AttackerDice, r => r.Total + fight.AttackerModifier == fight.DefenderTotal);
+        }
+
+        // ---- Applying ----
+
+        /// Applies the fight: the loser dies, the winner steals. After the tie cap the defender wins.
+        public FightResult Resolve(PendingFight fight)
+        {
+            var roll = new FightRoll(
+                fight.AttackerDice, fight.DefenderDice,
+                fight.AttackerModifier, fight.DefenderModifier, fight.Rerolls);
+
+            return fight.Kind == FightKind.VsSquire
+                ? ResolveSquireFight(fight, roll)
+                : ResolveBanditFight(fight, roll);
+        }
+
+        private FightResult ResolveSquireFight(PendingFight fight, FightRoll roll)
+        {
+            Pawn winner = roll.AttackerWon ? fight.Attacker : fight.Defender;
+            Pawn loser = roll.AttackerWon ? fight.Defender : fight.Attacker;
             Vector2Int loserSpot = loser.Position;
 
             TeamState loserTeam = state.Teams[loser.Team];
@@ -177,6 +239,7 @@ namespace Struikrovers.Core
             loserTeam.Wood -= stolen;
             state.Teams[winner.Team].Wood += stolen;
 
+            // The winner takes 1 piece of the loser's equipment of its choice.
             cards.QueueSteal(winner, loser);
 
             // A losing Bandit drops its captives. They are freed and run to safety.
@@ -188,34 +251,14 @@ namespace Struikrovers.Core
 
             state.SendToCastle(loser);
 
-            return new FightResult(attacker, defender, spot, roll, stolen, 0, rescued, blocked);
+            return new FightResult(
+                fight.Attacker, fight.Defender, fight.Position, roll, stolen, 0, rescued, blocked);
         }
 
-        // ---- Bandit vs Bandit ----
-
-        /// A Bandit that ended its move on a bush or tree fights the Bandit already there.
-        public bool TryFightOccupant(Pawn arriving, out FightResult result)
+        private FightResult ResolveBanditFight(PendingFight fight, FightRoll roll)
         {
-            result = default;
-
-            if (arriving == null || arriving.Type != PawnType.Bandit || arriving.AtCastle)
-                return false;
-
-            Pawn occupant = state.GetBanditAt(arriving.Position, arriving);
-            if (occupant == null || occupant.Team == arriving.Team)
-                return false;
-
-            result = FightBandits(arriving, occupant);
-            return true;
-        }
-
-        public FightResult FightBandits(Pawn attacker, Pawn defender)
-        {
-            Vector2Int spot = defender.Position;
-            FightRoll roll = RollFight(attacker, defender);
-
-            Pawn winner = roll.AttackerWon ? attacker : defender;
-            Pawn loser = roll.AttackerWon ? defender : attacker;
+            Pawn winner = roll.AttackerWon ? fight.Attacker : fight.Defender;
+            Pawn loser = roll.AttackerWon ? fight.Defender : fight.Attacker;
 
             // The winner takes over the loser's captives if it has room. Anything left
             // is freed and runs to safety, same as after a Bloodhound attack.
@@ -228,40 +271,15 @@ namespace Struikrovers.Core
             int blocked = 0;
 
             if (loser.IsCarrying)
-                blocked = rescue.ReleaseCaptives(loser, spot, new HashSet<Vector2Int>(), rescued);
+                blocked = rescue.ReleaseCaptives(loser, fight.Position, new HashSet<Vector2Int>(), rescued);
 
+            // The winner steals 1 piece of the loser's equipment of choice.
             cards.QueueSteal(winner, loser);
 
             state.SendToCastle(loser);
 
-            return new FightResult(attacker, defender, spot, roll, 0, takenOver, rescued, blocked);
-        }
-
-        // ---- Dice ----
-
-        /// Both sides roll; ties are rolled again. After MaxFightRerolls ties the defender wins.
-        private FightRoll RollFight(Pawn attacker, Pawn defender)
-        {
-            int attackerModifier = GetModifier(attacker, defender, true);
-            int defenderModifier = GetModifier(defender, attacker, false);
-
-            int rerolls = 0;
-            int attackerDie;
-            int defenderDie;
-
-            while (true)
-            {
-                attackerDie = rollDie();
-                defenderDie = rollDie();
-
-                bool tie = attackerDie + attackerModifier == defenderDie + defenderModifier;
-                if (!tie || rerolls >= GameConfig.MaxFightRerolls)
-                    break;
-
-                rerolls++;
-            }
-
-            return new FightRoll(attackerDie, attackerModifier, defenderDie, defenderModifier, rerolls);
+            return new FightResult(
+                fight.Attacker, fight.Defender, fight.Position, roll, 0, takenOver, rescued, blocked);
         }
     }
 }

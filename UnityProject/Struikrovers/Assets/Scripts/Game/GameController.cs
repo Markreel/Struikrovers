@@ -45,6 +45,9 @@ namespace Struikrovers.Game
         [Tooltip("1-6 makes every die roll (movement and fights) this number. 0 = normal random die. " +
                  "Note: with equal modifiers a forced die ties, so fights end by the reroll cap.")]
         [SerializeField] private int forcedDieResult = 0;
+        [Tooltip("Fights stop after the dice so you can play Reroll or Double Roll, and ties must be rolled again by hand. " +
+         "Turn it off for solo testing: fights then resolve at once and ties reroll automatically.")]
+        [SerializeField] private bool confirmFightRolls = true;
 
         private GameState state;
         private TurnManager turn;
@@ -143,6 +146,7 @@ namespace Struikrovers.Game
             if (eventLog != null) eventLog.Clear();
 
             turn = new TurnManager(state, deckSettings);
+            turn.ConfirmFightRolls = confirmFightRolls;
 
             if (forcedDieResult > 0)
             {
@@ -230,8 +234,8 @@ namespace Struikrovers.Game
             if (turn == null || cardMenu == null || InputBlocked)
                 return;
 
-            // Only the player whose turn it is can manage cards, and not while a question is open.
-            if (click.Team != turn.TurnOwner || !turn.CanManage)
+            // Only the player whose turn it is can use cards.
+            if (click.Team != turn.TurnOwner)
                 return;
 
             var entries = new List<CardMenuEntry>();
@@ -241,11 +245,26 @@ namespace Struikrovers.Game
                 int index = click.HandIndex;
                 CardDefinition card = click.Card;
 
-                entries.Add(new CardMenuEntry(
-                    $"Discard {card.Name}",
-                    () => turn.DiscardHandCard(click.Team, index, card)));
+                // Playing a card is always listed, with the reason when it can't be played now.
+                if (HandCardEffects.Get(card) != null)
+                {
+                    bool canPlay = turn.CanPlayHandCard(click.Team, card, out string reason);
+                    string label = canPlay ? $"Play {card.Name}" : $"Can't play {card.Name}: {reason}";
+
+                    entries.Add(new CardMenuEntry(
+                        label,
+                        () => turn.PlayHandCard(click.Team, index, card),
+                        canPlay));
+                }
+
+                if (turn.CanManage)
+                {
+                    entries.Add(new CardMenuEntry(
+                        $"Discard {card.Name}",
+                        () => turn.DiscardHandCard(click.Team, index, card)));
+                }
             }
-            else
+            else if (turn.CanManageEquipment)
             {
                 Pawn pawn = state.GetPawnByRole(click.Team, click.Role);
                 if (pawn == null)
@@ -268,6 +287,9 @@ namespace Struikrovers.Game
                         }));
                 }
             }
+
+            if (entries.Count == 0)
+                return;
 
             cardMenu.Show(click.Card.Name, click.Card.Text, entries);
         }

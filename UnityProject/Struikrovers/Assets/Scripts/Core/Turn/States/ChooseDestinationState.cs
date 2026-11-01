@@ -8,6 +8,7 @@ namespace Struikrovers.Core
     /// A Squire may fight enemy Squires on the way, and that fight is not an action:
     /// - an enemy Squire it can reach right now: fight it and keep the steps that are left;
     /// - a tile behind one or more enemy Squires: fight them all, then end on that tile.
+    /// The first click that commits to a move closes the window for Reroll and Double Roll.
     public sealed class ChooseDestinationState : TurnState
     {
         private HashSet<Vector2Int> destinations = new HashSet<Vector2Int>();
@@ -48,6 +49,7 @@ namespace Struikrovers.Core
             // Fight an enemy Squire that blocks the way, then keep moving.
             if (fightSteps.TryGetValue(position, out int steps))
             {
+                Turn.CloseMovementRoll();
                 FightWhileMoving(position, steps);
                 return;
             }
@@ -55,6 +57,7 @@ namespace Struikrovers.Core
             // Fight through every Squire on the way to a tile behind them.
             if (blockedPaths.TryGetValue(position, out BlockedPath path))
             {
+                Turn.CloseMovementRoll();
                 FightThroughPath(path);
                 return;
             }
@@ -71,6 +74,7 @@ namespace Struikrovers.Core
             if (!destinations.Contains(position))
                 return;
 
+            Turn.CloseMovementRoll();
             Pawn.Position = position;
 
             // Bandit fights on an occupied hiding place, delivery at the castle, and the
@@ -80,55 +84,67 @@ namespace Struikrovers.Core
 
         private void FightWhileMoving(Vector2Int tile, int steps)
         {
-            List<FightResult> fights = Turn.CombatRules.FightSquiresAt(Pawn, tile);
-            if (fights.Count == 0)
-                return;
+            Pawn pawn = Pawn;
 
-            foreach (FightResult fight in fights)
-                Turn.Raise(TurnEvent.SquireFight(fight));
-
-            // The Squire lost and is back in its castle: the activation is over.
-            if (!fights.TrueForAll(f => f.AttackerWon))
+            Turn.FightSquiresAt(pawn, tile, results =>
             {
-                Turn.FinishActivation();
-                return;
-            }
+                if (results.Count == 0)
+                    return;
 
-            // The winner takes the tile (leaving the castle if it started there) and keeps
-            // the steps it has left. The fight did not use up its action.
-            Pawn.Position = tile;
-            Turn.RolledMovement = Mathf.Max(0, Turn.RolledMovement - steps);
+                // The Squire lost and is back in its castle: the activation is over.
+                if (!results.TrueForAll(f => f.AttackerWon))
+                {
+                    Turn.FinishActivation();
+                    return;
+                }
 
-            // Stolen equipment is resolved first (prompts), then the move continues.
-            Turn.RunPending(() =>
-            {
-                if (Turn.RolledMovement == 0)
-                    Turn.CompleteMovement();
-                else
-                    Turn.ChangeState(new ChooseDestinationState(Turn));
+                // The winner takes the tile (leaving the castle if it started there) and keeps
+                // the steps it has left. The fight did not use up its action.
+                pawn.Position = tile;
+                Turn.RolledMovement = Mathf.Max(0, Turn.RolledMovement - steps);
+
+                // Stolen equipment is resolved first (prompts), then the move continues.
+                Turn.RunPending(() =>
+                {
+                    if (Turn.RolledMovement == 0)
+                        Turn.CompleteMovement();
+                    else
+                        Turn.ChangeState(new ChooseDestinationState(Turn));
+                });
             });
         }
 
         private void FightThroughPath(BlockedPath path)
         {
+            Pawn pawn = Pawn;
+            int index = 0;
+
             // Fight the Squires in the order they stand on the route. A loss ends the activation.
-            foreach (Vector2Int tile in path.Blockers)
+            void FightNextBlocker()
             {
-                List<FightResult> fights = Turn.CombatRules.FightSquiresAt(Pawn, tile);
-
-                foreach (FightResult fight in fights)
-                    Turn.Raise(TurnEvent.SquireFight(fight));
-
-                if (!fights.TrueForAll(f => f.AttackerWon))
+                if (index >= path.Blockers.Count)
                 {
-                    Turn.FinishActivation();
+                    // Every blocker is beaten: the Squire ends on the tile it clicked.
+                    pawn.Position = path.Destination;
+                    Turn.RunPending(Turn.CompleteMovement);
                     return;
                 }
+
+                Vector2Int tile = path.Blockers[index++];
+
+                Turn.FightSquiresAt(pawn, tile, results =>
+                {
+                    if (!results.TrueForAll(f => f.AttackerWon))
+                    {
+                        Turn.FinishActivation();
+                        return;
+                    }
+
+                    FightNextBlocker();
+                });
             }
 
-            // Every blocker is beaten: the Squire ends on the tile it clicked.
-            Pawn.Position = path.Destination;
-            Turn.RunPending(Turn.CompleteMovement);
+            FightNextBlocker();
         }
     }
 }

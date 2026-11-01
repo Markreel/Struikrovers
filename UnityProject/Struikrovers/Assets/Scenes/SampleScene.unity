@@ -2151,23 +2151,21 @@ MonoBehaviour:
   privacyOverlay: {fileID: 545035576}
   mapFileName: default-map.json
   deckSettings:
-    handCardCopies: 0
+    handCardCopies: 3
     equipmentCopies: 1
-    curseCopies: 0
+    curseCopies: 1
     overrides: []
     maxHandSize: 5
     dragonBottomCount: 10
-    endOfTurnDraws: 2
-    seed: 1
-    topCards:
-    - greedy-gloves
-    - gravediggers-spade
-    - charming-chestplate
-    - warding-amulet
+    endOfTurnDraws: 1
+    seed: 0
+    topCards: []
+    debugCurses: []
   hideEnemyBandits: 0
   usePrivacyOverlay: 1
   spaceRevealsOverlay: 1
   forcedDieResult: 0
+  confirmFightRolls: 1
 --- !u!4 &1310390998
 Transform:
   m_ObjectHideFlags: 0

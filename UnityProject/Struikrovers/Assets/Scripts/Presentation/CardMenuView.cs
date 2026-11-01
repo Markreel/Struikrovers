@@ -10,11 +10,13 @@ namespace Struikrovers.Presentation
     {
         public readonly string Label;
         public readonly Action OnChosen;
+        public readonly bool Enabled;
 
-        public CardMenuEntry(string label, Action onChosen)
+        public CardMenuEntry(string label, Action onChosen, bool enabled = true)
         {
             Label = label;
             OnChosen = onChosen;
+            Enabled = enabled;
         }
     }
 
@@ -58,7 +60,10 @@ namespace Struikrovers.Presentation
                 buttons[i].gameObject.SetActive(used);
 
                 if (used)
+                {
                     labels[i].text = current[i].Label;
+                    buttons[i].interactable = current[i].Enabled;
+                }
             }
         }
 

@@ -31,7 +31,10 @@ namespace Struikrovers.Core
         EquipmentTaken,
         EquipmentMoved,
         AmbushPrevented,
-        CardTakenFromDiscard
+        CardTakenFromDiscard,
+        DiceRolled,
+        FightRolled,
+        CardPlayed
     }
 
     /// Something worth telling the players. Core never builds message text;
@@ -48,6 +51,8 @@ namespace Struikrovers.Core
         /// The team this is about (card events). -1 when not used.
         public int Team { get; }
         public CardDefinition Card { get; }
+        public DiceRoll Dice { get; }
+        public DiceRoll OtherDice { get; }
 
         private TurnEvent(
             TurnEventKind kind,
@@ -58,7 +63,9 @@ namespace Struikrovers.Core
             SniffClue clue = SniffClue.NoCaptive,
             FightResult fight = default,
             int team = -1,
-            CardDefinition card = null)
+            CardDefinition card = null, 
+            DiceRoll dice = null, 
+            DiceRoll otherDice = null)
         {
             Kind = kind;
             Actor = actor;
@@ -69,6 +76,8 @@ namespace Struikrovers.Core
             Fight = fight;
             Team = team;
             Card = card;
+            Dice = dice;
+            OtherDice = otherDice;
         }
 
         /// Actor = the Bandit, Target = the abducted Royalty.
@@ -177,5 +186,18 @@ namespace Struikrovers.Core
 
         public static TurnEvent CardTakenFromDiscard(int team, CardDefinition card) =>
             new TurnEvent(TurnEventKind.CardTakenFromDiscard, team: team, card: card);
+
+        public static TurnEvent DiceRolled(DiceRoll roll) =>
+    new TurnEvent(TurnEventKind.DiceRolled, roll.Pawn, team: roll.Pawn.Team, dice: roll);
+
+        /// Actor = attacker, Target = defender, Amount and SecondAmount = their totals with modifiers.
+        /// Dice = the attacker's roll, OtherDice = the defender's.
+        public static TurnEvent FightRolled(PendingFight fight) =>
+            new TurnEvent(TurnEventKind.FightRolled, fight.Attacker, fight.Defender,
+                          fight.AttackerTotal, fight.DefenderTotal,
+                          dice: fight.AttackerDice, otherDice: fight.DefenderDice);
+
+        public static TurnEvent CardPlayed(int team, CardDefinition card) =>
+            new TurnEvent(TurnEventKind.CardPlayed, team: team, card: card);
     }
 }

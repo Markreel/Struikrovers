@@ -17,22 +17,34 @@ namespace Struikrovers.Core
 
         public ActionOutcome Execute(ActionContext ctx, Vector2Int target)
         {
-            AbductionRules abduction = ctx.Turn.AbductionRules;
+            TurnManager turn = ctx.Turn;
+            AbductionRules abduction = turn.AbductionRules;
+            Pawn bandit = ctx.Actor;
 
-            if (!abduction.CanAbductAdjacent(ctx.Actor, target))
+            if (!abduction.CanAbductAdjacent(bandit, target))
                 return ActionOutcome.NotPerformed;
 
+            // A guard fight may wait for the dice, so this action ends the activation itself.
+            ctx.TakeOverFlow();
+
             // The guard fight comes first. Losing ends the activation without an abduction.
-            if (!ctx.Turn.FightGuards(ctx.Actor, target, out List<Pawn> rescued))
+            turn.FightGuards(bandit, target, (survived, rescued) =>
             {
-                if (rescued.Count > 0)
-                    ctx.BeginRescueRuns(rescued);
+                if (!survived)
+                {
+                    if (rescued.Count > 0)
+                        turn.BeginRescueRuns(rescued, false);
+                    else
+                        turn.FinishActivation();
 
-                return ActionOutcome.Performed;
-            }
+                    return;
+                }
 
-            if (abduction.TryAbductAdjacent(ctx.Actor, target, out Pawn royalty))
-                ctx.Raise(TurnEvent.Abducted(royalty, ctx.Actor));
+                if (abduction.TryAbductAdjacent(bandit, target, out Pawn royalty))
+                    turn.Raise(TurnEvent.Abducted(royalty, bandit));
+
+                turn.FinishActivation();
+            });
 
             return ActionOutcome.Performed;
         }

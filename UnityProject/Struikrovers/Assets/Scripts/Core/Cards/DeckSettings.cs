@@ -34,6 +34,17 @@ namespace Struikrovers.Core
         public int seed = 0;
         [Tooltip("Card ids placed on top of the deck, first = drawn first.")]
         public List<string> topCards = new List<string>();
+        [Serializable]
+        public sealed class DebugCurse
+        {
+            [Min(0)] public int team;
+            [Tooltip("For example \"curse-drunk-squire\" (see CardCatalog).")]
+            public string cardId;
+        }
+
+        // in DeckSettings, under [Header("Debug")]
+        [Tooltip("Curses placed on teams when the game starts. For testing, until the curse cards work.")]
+        public List<DebugCurse> debugCurses = new List<DebugCurse>();
 
         public int GetCopies(CardDefinition card)
         {

@@ -26,4 +26,15 @@ namespace Struikrovers.Core
     {
         public override bool OffersDiscardPick(Pawn looter, CardDefinition card) => true;
     }
+
+    /// Advantage on one kind of roll: Lucky Loafers (movement), Short Swords and Bush Blade (combat).
+    internal sealed class RollAdvantageEffect : EquipmentEffect
+    {
+        private readonly RollKind kind;
+
+        public RollAdvantageEffect(RollKind kind) { this.kind = kind; }
+
+        public override bool GrantsAdvantage(Pawn wearer, CardDefinition card, RollKind rollKind) =>
+            rollKind == kind;
+    }
 }
