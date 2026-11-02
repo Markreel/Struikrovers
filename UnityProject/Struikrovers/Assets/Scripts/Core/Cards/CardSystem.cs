@@ -10,6 +10,7 @@ namespace Struikrovers.Core
     public sealed class CardSystem
     {
         public const string MartyrShieldId = "martyr-shield";
+        public const string ChainmailId = "chainmail";
         public const string RoyalInheritanceId = "royal-inheritance";
 
         private static readonly EquipmentSlot[] SlotsInOrder =
@@ -244,45 +245,62 @@ namespace Struikrovers.Core
                 if (victim.Equipment.Get(slot) != null)
                     slots.Add(slot);
 
-            // Nothing to take, so nothing happens (and a Martyr Shield is not triggered).
+            // Nothing to take, so nothing happens (and no protector is triggered).
             if (slots.Count == 0)
                 return null;
 
-            bool shieldSpent = false;
-
+            // Every slot is taken once, and each protector only covers its own slot, so
+            // Martyr Shield and Chainmail can each trigger at most once per theft.
             if (item.TakeAll)
             {
                 foreach (EquipmentSlot slot in slots)
-                    TakeForTheft(thief, victim, slot, ref shieldSpent);
+                    TakeEquipment(thief.Team, thief, victim, slot);
 
                 return null;
             }
 
-            // With a single item, or a Martyr Shield that takes its place, there is no real choice.
-            if (slots.Count == 1 || TryFindShield(victim.Team, out _, out _))
+            // With a single item there is no real choice.
+            if (slots.Count == 1)
             {
-                TakeForTheft(thief, victim, slots[0], ref shieldSpent);
+                TakeEquipment(thief.Team, thief, victim, slots[0]);
                 return null;
             }
 
             return StealEquipmentPrompt.Create(this, thief, victim);
         }
 
-        /// Takes one item off the victim for the thief. A Martyr Shield on any pawn of the
-        /// victim's team is taken instead of the chosen item (once per theft). The item then
-        /// waits in the queue to be equipped or discarded by the thief's team.
-        internal void TakeForTheft(Pawn thief, Pawn victim, EquipmentSlot slot, ref bool shieldSpent)
+        /// Takes one item off the victim for the thief. A Martyr Shield (weapons) or Chainmail
+        /// (clothing) on any pawn of the victim's team is taken instead of the chosen item.
+        /// The item then waits in the queue to be equipped or discarded by the thief's team.
+        internal void TakeForTheft(Pawn thief, Pawn victim, EquipmentSlot slot) =>
+            TakeEquipment(thief.Team, thief, victim, slot);
+
+        /// The thief chose this item in a StealEquipmentPrompt.
+        internal void CompleteChosenTheft(Pawn thief, Pawn victim, EquipmentSlot slot) =>
+            TakeEquipment(thief.Team, thief, victim, slot);
+
+        /// Nab card: the team takes 1 equipped item of its choice from an opponent's pawn.
+        /// A Martyr Shield or Chainmail protects against it like against any other theft.
+        internal void Nab(int thiefTeam, Pawn victim, EquipmentSlot slot)
+        {
+            if (victim == null || victim.Team == thiefTeam || victim.Equipment.Get(slot) == null)
+                return;
+
+            TakeEquipment(thiefTeam, null, victim, slot);
+        }
+
+        // 'thief' is null when no pawn is doing the stealing (the Nab card).
+        private void TakeEquipment(int thiefTeam, Pawn thief, Pawn victim, EquipmentSlot slot)
         {
             CardDefinition card;
-            bool viaShield = false;
+            bool viaProtector = false;
 
-            if (!shieldSpent && TryFindShield(victim.Team, out Pawn holder, out EquipmentSlot shieldSlot))
+            if (TryFindProtector(victim.Team, slot, out Pawn holder))
             {
-                shieldSpent = true;
-                card = Unequip(holder, shieldSlot);
+                card = Unequip(holder, slot);
 
-                // Choosing the shield itself is not a substitution.
-                viaShield = !(holder == victim && shieldSlot == slot);
+                // Choosing the protector itself is not a substitution.
+                viaProtector = holder != victim;
             }
             else
             {
@@ -292,39 +310,59 @@ namespace Struikrovers.Core
             if (card == null)
                 return;
 
-            raise(TurnEvent.EquipmentTaken(thief, victim, card, viaShield));
-            pending.Enqueue(new PendingItem { Team = thief.Team, Card = card });
+            raise(thief != null
+                ? TurnEvent.EquipmentTaken(thief, victim, card, viaProtector)
+                : TurnEvent.EquipmentNabbed(thiefTeam, victim, card, viaProtector));
+
+            pending.Enqueue(new PendingItem { Team = thiefTeam, Card = card });
         }
 
-        /// The thief chose this item in a StealEquipmentPrompt.
-        internal void CompleteChosenTheft(Pawn thief, Pawn victim, EquipmentSlot slot)
-        {
-            bool shieldSpent = false;
-            TakeForTheft(thief, victim, slot, ref shieldSpent);
-        }
+        private static string ProtectorId(EquipmentSlot slot) =>
+            slot == EquipmentSlot.Weapon ? MartyrShieldId : ChainmailId;
 
-        private bool TryFindShield(int team, out Pawn holder, out EquipmentSlot slot)
+        // The Martyr Shield (weapon slot) or Chainmail (clothing slot) of this team, on any pawn.
+        private bool TryFindProtector(int team, EquipmentSlot slot, out Pawn holder)
         {
+            string id = ProtectorId(slot);
+
             foreach (Pawn pawn in state.Pawns)
             {
                 if (pawn.Team != team)
                     continue;
 
-                foreach (EquipmentSlot s in SlotsInOrder)
+                CardDefinition item = pawn.Equipment.Get(slot);
+                if (item != null && item.Id == id)
                 {
-                    CardDefinition item = pawn.Equipment.Get(s);
-                    if (item != null && item.Id == MartyrShieldId)
-                    {
-                        holder = pawn;
-                        slot = s;
-                        return true;
-                    }
+                    holder = pawn;
+                    return true;
                 }
             }
 
             holder = null;
-            slot = EquipmentSlot.Weapon;
             return false;
+        }
+
+        /// The item that would be taken instead of something in this slot, or null. For prompt text.
+        public CardDefinition GetProtector(int team, EquipmentSlot slot) =>
+            TryFindProtector(team, slot, out Pawn holder) ? holder.Equipment.Get(slot) : null;
+
+        // ---- Stealing from a hand ----
+
+        /// Yoink card: takes the card at this position from the victim's hand. It goes to the
+        /// thief's team like a drawn card (hand full? the thief decides what to discard).
+        internal CardDefinition Yoink(int thiefTeam, int victimTeam, int handIndex)
+        {
+            if (thiefTeam == victimTeam || victimTeam < 0 || victimTeam >= state.TeamCount)
+                return null;
+
+            List<CardDefinition> hand = state.Teams[victimTeam].hand;
+            if (handIndex < 0 || handIndex >= hand.Count)
+                return null;
+
+            CardDefinition card = RemoveFromHand(victimTeam, handIndex);
+            raise(TurnEvent.CardYoinked(thiefTeam, victimTeam));
+            QueueGain(thiefTeam, card);
+            return card;
         }
 
         // ---- Changes (used by the prompts and later by card effects) ----
@@ -372,7 +410,7 @@ namespace Struikrovers.Core
         }
 
         // ---- Managing your own equipment and hand ----
-        // All of this is voluntary, so it never triggers the Martyr Shield.
+        // All of this is voluntary, so it never triggers the Martyr Shield or Chainmail.
 
         /// What the owner can do with the item in this slot: move it to a pawn that can wear it,
         /// swap with that pawn's item when both fit, or discard it.
@@ -467,6 +505,22 @@ namespace Struikrovers.Core
 
             discardPile.Add(RemoveFromHand(team, index));
             raise(TurnEvent.CardPlayed(team, expected));
+            return true;
+        }
+
+        /// Takes back a card that was just played, because its question was cancelled. Only works
+        /// while the card is still on top of the discard pile. It returns to its old place in the hand.
+        internal bool UndoPlay(int team, int index, CardDefinition card)
+        {
+            if (discardPile.Count == 0 || discardPile[discardPile.Count - 1] != card)
+                return false;
+
+            discardPile.RemoveAt(discardPile.Count - 1);
+
+            List<CardDefinition> hand = state.Teams[team].hand;
+            hand.Insert(Math.Min(Math.Max(0, index), hand.Count), card);
+
+            raise(TurnEvent.CardPlayCancelled(team, card));
             return true;
         }
 

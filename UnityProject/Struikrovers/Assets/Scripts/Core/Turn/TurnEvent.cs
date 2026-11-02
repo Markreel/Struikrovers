@@ -34,7 +34,10 @@ namespace Struikrovers.Core
         CardTakenFromDiscard,
         DiceRolled,
         FightRolled,
-        CardPlayed
+        CardPlayed,
+        EquipmentNabbed,
+        CardYoinked,
+        CardPlayCancelled
     }
 
     /// Something worth telling the players. Core never builds message text;
@@ -199,5 +202,18 @@ namespace Struikrovers.Core
 
         public static TurnEvent CardPlayed(int team, CardDefinition card) =>
             new TurnEvent(TurnEventKind.CardPlayed, team: team, card: card);
+
+        /// Team = the player who nabbed it, Target = the pawn it came from.
+        /// Amount = 1 when a Martyr Shield or Chainmail was taken instead of the chosen item.
+        public static TurnEvent EquipmentNabbed(int team, Pawn victim, CardDefinition card, bool viaProtector) =>
+            new TurnEvent(TurnEventKind.EquipmentNabbed, null, victim, viaProtector ? 1 : 0,
+                          team: team, card: card);
+
+        /// Team = the player who took the card, Amount = the team it came from. The card stays private.
+        public static TurnEvent CardYoinked(int team, int fromTeam) =>
+            new TurnEvent(TurnEventKind.CardYoinked, amount: fromTeam, team: team);
+
+        public static TurnEvent CardPlayCancelled(int team, CardDefinition card) =>
+    new TurnEvent(TurnEventKind.CardPlayCancelled, team: team, card: card);
     }
 }

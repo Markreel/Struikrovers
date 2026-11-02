@@ -25,6 +25,9 @@ namespace Struikrovers.Core
 
         /// True when this item gives the wearer advantage on this kind of roll.
         bool GrantsAdvantage(Pawn wearer, CardDefinition card, RollKind kind);
+
+        /// True when this item lets the wearer's team look at a hand before stealing a card from it.
+        bool RevealsStolenHand(Pawn wearer, CardDefinition card);
     }
 
     /// Base class with do-nothing defaults, so an effect only overrides what it needs.
@@ -37,10 +40,12 @@ namespace Struikrovers.Core
         public virtual bool PreventsCurse(Pawn wearer, CardDefinition card) => false;
         public virtual bool OffersDiscardPick(Pawn looter, CardDefinition card) => false;
         public virtual bool GrantsAdvantage(Pawn wearer, CardDefinition card, RollKind kind) => false;
+        public virtual bool RevealsStolenHand(Pawn wearer, CardDefinition card) => false;
     }
 
     /// The effect of each equipment card, by card id. Cards without an entry only have their
-    /// +N modifier (Greatsword and Full Plate Armor are exactly that).
+    /// +N modifier (Greatsword and Full Plate Armor are exactly that). Martyr Shield and
+    /// Chainmail are handled by CardSystem, where theft happens.
     public static class EquipmentEffects
     {
         private static readonly Dictionary<string, IEquipmentEffect> effects =
@@ -52,6 +57,7 @@ namespace Struikrovers.Core
             Register("charming-chestplate", new CharmingChestplateEffect());
             Register("warding-amulet", new WardingAmuletEffect());
             Register("gravediggers-spade", new GravediggersSpadeEffect());
+            Register("measuring-monocle", new MeasuringMonocleEffect());
             Register("lucky-loafers", new RollAdvantageEffect(RollKind.Movement));
             Register("short-swords", new RollAdvantageEffect(RollKind.Combat));
             Register("bush-blade", new RollAdvantageEffect(RollKind.Combat));
@@ -119,6 +125,25 @@ namespace Struikrovers.Core
                         source = item;
                         return true;
                     }
+                }
+            }
+
+            return false;
+        }
+
+        /// Looks at every pawn of the team: the Monocle belongs to the player, not one pawn.
+        public static bool RevealsStolenHand(GameState state, int team)
+        {
+            foreach (Pawn pawn in state.Pawns)
+            {
+                if (pawn.Team != team)
+                    continue;
+
+                foreach (CardDefinition item in pawn.Equipment.Items)
+                {
+                    IEquipmentEffect effect = Get(item);
+                    if (effect != null && effect.RevealsStolenHand(pawn, item))
+                        return true;
                 }
             }
 

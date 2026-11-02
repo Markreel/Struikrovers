@@ -182,7 +182,13 @@ namespace Struikrovers.Core
                     continue;
 
                 slots.Add(slot);
-                options.Add(new PromptOption($"Take {item.Name} ({slot}): {item.Text}", item));
+                string label = $"Take {item.Name} ({slot}): {item.Text}";
+
+                CardDefinition guard = cards.GetProtector(victim.Team, slot);
+                if (guard != null && guard != item)
+                    label += $"  [{guard.Name} is taken instead]";
+
+                options.Add(new PromptOption(label, item));
             }
 
             return new StealEquipmentPrompt(cards, thief, victim, slots, options);

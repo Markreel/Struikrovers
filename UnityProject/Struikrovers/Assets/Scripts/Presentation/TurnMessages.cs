@@ -166,7 +166,7 @@ namespace Struikrovers.Presentation
                 case TurnEventKind.EquipmentTaken:
                     {
                         string clue = e.Amount > 0
-                            ? $"Player {e.Target.Team + 1}'s Martyr Shield was taken instead, by " +
+                            ? $"Player {e.Target.Team + 1}'s {e.Card.Name} was taken instead, by " +
                               $"Player {e.Actor.Team + 1}'s {e.Actor.BaseType}."
                             : $"Player {e.Actor.Team + 1}'s {e.Actor.BaseType} took {e.Card.Name} " +
                               $"from Player {e.Target.Team + 1}'s {e.Target.BaseType}.";
@@ -210,6 +210,25 @@ namespace Struikrovers.Presentation
 
                 case TurnEventKind.CardPlayed:
                     return new TurnMessage(null, $"Player {e.Team + 1} played {e.Card.Name}.");
+
+                case TurnEventKind.EquipmentNabbed:
+                    {
+                        string clue = e.Amount > 0
+                            ? $"Player {e.Team + 1} nabbed Player {e.Target.Team + 1}'s {e.Card.Name}, " +
+                              "which was taken instead of the chosen item."
+                            : $"Player {e.Team + 1} nabbed {e.Card.Name} from " +
+                              $"Player {e.Target.Team + 1}'s {e.Target.BaseType}.";
+                        return new TurnMessage(clue, clue);
+                    }
+
+                case TurnEventKind.CardYoinked:
+                    {
+                        string clue = $"Player {e.Team + 1} yoinked a card from Player {e.Amount + 1}'s hand.";
+                        return new TurnMessage(clue, clue);
+                    }
+
+                case TurnEventKind.CardPlayCancelled:
+                    return new TurnMessage(null, $"Player {e.Team + 1} took {e.Card.Name} back into their hand.");
 
                 default:
                     return new TurnMessage(null);
@@ -391,7 +410,9 @@ namespace Struikrovers.Presentation
                     break;
 
                 case PromptState _:
-                    message += " | Make a choice in the panel.";
+                    message += step.CanCancel
+                        ? " | Make a choice in the panel, or click Cancel (Esc) to take the card back."
+                        : " | Make a choice in the panel.";
                     break;
 
                 case FightPauseState pause:

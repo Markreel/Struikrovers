@@ -27,6 +27,14 @@ namespace Struikrovers.Core
         public override bool OffersDiscardPick(Pawn looter, CardDefinition card) => true;
     }
 
+    /// When the wearer's team steals from a hand (Yoink), it sees the cards before choosing.
+    /// A Bloodhound ignores equipment effects.
+    internal sealed class MeasuringMonocleEffect : EquipmentEffect
+    {
+        public override bool RevealsStolenHand(Pawn wearer, CardDefinition card) =>
+            wearer.Type == wearer.BaseType;
+    }
+
     /// Advantage on one kind of roll: Lucky Loafers (movement), Short Swords and Bush Blade (combat).
     internal sealed class RollAdvantageEffect : EquipmentEffect
     {

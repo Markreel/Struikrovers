@@ -220,6 +220,12 @@ namespace Struikrovers.Core
             return effect.CanPlay(this, out reason);
         }
 
+        // The hand card being played right now, so a question it asks can be cancelled.
+        private bool playing;
+        private int playingTeam;
+        private int playingIndex;
+        private CardDefinition playingCard;
+
         public void PlayHandCard(int team, int index, CardDefinition expected)
         {
             Dispatch(() =>
@@ -231,8 +237,51 @@ namespace Struikrovers.Core
                     return;
 
                 HandCardsPlayedThisTurn++;
-                HandCardEffects.Get(expected).Play(this);
+
+                playing = true;
+                playingTeam = team;
+                playingIndex = index;
+                playingCard = expected;
+
+                try { HandCardEffects.Get(expected).Play(this); }
+                finally { playing = false; }
             });
+        }
+
+        /// A hand card that needs a decision: asks the turn owner, then resolves whatever was
+        /// taken (equip it? hand full?) and goes back to the state the turn was in.
+        /// Cancelling gives the card back and goes straight back to that state.
+        internal void AskDuringTurn(DecisionPrompt prompt)
+        {
+            if (prompt == null)
+                return;
+
+            ITurnState previous = CurrentState;
+            Action cancel = null;
+
+            if (playing)
+            {
+                int team = playingTeam;
+                int index = playingIndex;
+                CardDefinition card = playingCard;
+
+                cancel = () =>
+                {
+                    if (Cards.UndoPlay(team, index, card))
+                        HandCardsPlayedThisTurn = Math.Max(0, HandCardsPlayedThisTurn - 1);
+
+                    ResumeState(previous);
+                };
+            }
+
+            ChangeState(new PromptState(this, prompt, () => RunPending(() => ResumeState(previous)), cancel));
+        }
+
+        // Goes back to a state without entering it again, so its choices (action group...) stay as they were.
+        private void ResumeState(ITurnState previous)
+        {
+            CurrentState = previous;
+            MarkChanged();
         }
 
         /// True when the turn owner holds a roll card they could play right now (for hints).

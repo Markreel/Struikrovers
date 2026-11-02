@@ -75,7 +75,11 @@ namespace Struikrovers.Game
             if (playerPanels != null)
                 foreach (PlayerPanelView panel in playerPanels)
                     if (panel != null) panel.CardClicked += OnCardClicked;
-            if (input != null) input.PrimaryPressed += OnPrimary;
+            if (input != null)
+            {
+                input.PrimaryPressed += OnPrimary;
+                input.CancelPressed += OnEscape;
+            }
         }
 
         private void OnDisable()
@@ -91,7 +95,11 @@ namespace Struikrovers.Game
             if (promptView != null) promptView.OptionChosen -= OnPromptChosen;
             if (piles != null) piles.DiscardClicked -= OnDiscardClicked;
             if (privacyOverlay != null) privacyOverlay.RevealClicked -= OnRevealClicked;
-            if (input != null) input.PrimaryPressed -= OnPrimary;
+            if (input != null)
+            {
+                input.PrimaryPressed -= OnPrimary;
+                input.CancelPressed -= OnEscape;
+            }
         }
 
         private void Start() => Reload();
@@ -274,6 +282,18 @@ namespace Struikrovers.Game
         private void OnCancel()
         {
             if (!InputBlocked) turn?.OnCancel();
+        }
+
+        // Escape closes an open card menu first, otherwise it is the same as the Cancel button.
+        private void OnEscape()
+        {
+            if (cardMenu != null && cardMenu.IsOpen)
+            {
+                cardMenu.Hide();
+                return;
+            }
+
+            OnCancel();
         }
 
         private void OnActionGroupSelected(string group)

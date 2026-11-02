@@ -82,7 +82,8 @@ namespace Struikrovers.Core
             l.Add(CardDefinition.Equipment("bush-blade", "Bush Blade", W, bandit, 1, "In combat, roll with advantage."));
 
             // ---- General equipment ----
-            l.Add(CardDefinition.Equipment("martyr-shield", "Martyr Shield", W, any, 3, "When you must discard or give away equipment from any of your pawns, this is taken instead. (Not against Curse of the Naked.)"));
+            l.Add(CardDefinition.Equipment("martyr-shield", "Martyr Shield", W, any, 2, "When you must discard or give away a weapon from any of your pawns, this is taken instead. (Not against Curse of the Naked.)"));
+            l.Add(CardDefinition.Equipment("chainmail", "Martyr Chainmail", C, any, 2, "When you must discard or give away clothing from any of your pawns, this is taken instead. (Not against Curse of the Naked.)"));
             l.Add(CardDefinition.Equipment("slanted-slippers", "Slanted Slippers", C, any, 1, "May move diagonally, costing 1 step per diagonal move."));
             l.Add(CardDefinition.Equipment("flaying-fishpole", "Flaying Fishpole", W, any, 1, "May loot a bush 2 tiles away, through terrain and pawns. A hidden Bandit still gets you. Bandits can't use it."));
             l.Add(CardDefinition.Equipment("measuring-monocle", "Measuring Monocle", C, any, 1, "When stealing from someone's hand, look at the cards before choosing."));

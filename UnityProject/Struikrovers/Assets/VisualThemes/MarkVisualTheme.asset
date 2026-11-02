@@ -49,9 +49,9 @@ MonoBehaviour:
   generalEquipment: {r: 0.8, g: 0.25098044, b: 0.30297565, a: 1}
   dieFaces:
   - {fileID: 21300000, guid: 6704463e248d64848b1d0afe275fee1b, type: 3}
+  - {fileID: 21300000, guid: 6704463e248d64848b1d0afe275fee1b, type: 3}
+  - {fileID: 21300000, guid: 6704463e248d64848b1d0afe275fee1b, type: 3}
   - {fileID: 21300000, guid: 144086a2e4151f64c8b7a8ee6e60749e, type: 3}
-  - {fileID: 21300000, guid: 144086a2e4151f64c8b7a8ee6e60749e, type: 3}
-  - {fileID: 21300000, guid: 69e2d6576fce5fe4ea01116d4eb8126b, type: 3}
   - {fileID: 21300000, guid: 69e2d6576fce5fe4ea01116d4eb8126b, type: 3}
   - {fileID: 21300000, guid: 2871ed34e6dab5f4590694a0ebd92332, type: 3}
   diceNormal: {r: 1, g: 1, b: 1, a: 1}
