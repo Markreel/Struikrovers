@@ -7,8 +7,9 @@ using UnityEngine.UI;
 
 namespace Struikrovers.Presentation
 {
-    /// Dims the screen and lifts chosen objects above the dim with a nested Canvas, so
-    /// layouts, prefabs and hierarchy stay untouched. Hovering keeps working on lifted objects.
+    /// Dims the screen and lifts chosen objects above the dim with a temporary nested Canvas,
+    /// so layouts, prefabs and hierarchy stay untouched. Hovering keeps working on lifted objects.
+    /// It only shows and reports clicks; the turn state decides what a click means.
     public sealed class SelectionLayer : MonoBehaviour
     {
         [SerializeField] private GameObject root;
@@ -18,8 +19,6 @@ namespace Struikrovers.Presentation
         [SerializeField] private TMP_Text hintLabel;
         [SerializeField] private Button cancelButton;
         [SerializeField] private Button continueButton;
-        [Tooltip("Card detail popup, privacy overlay and so on. They are put above everything here.")]
-        [SerializeField] private Canvas[] alwaysOnTop;
         [SerializeField] private int baseOrder = 100;
 
         private sealed class Lifted
@@ -30,9 +29,11 @@ namespace Struikrovers.Presentation
             public bool AddedCanvas, AddedRaycaster, OldOverride;
             public int OldOrder;
             public SelectionTarget Target;
+            public CardView Card;
         }
 
         private readonly List<Lifted> lifted = new List<Lifted>();
+        private readonly List<GameObject> overlays = new List<GameObject>();
         private Action<int> onPicked;
         private Action onCancel;
         private Action onContinue;
@@ -47,23 +48,28 @@ namespace Struikrovers.Presentation
             if (continueButton != null) continueButton.onClick.AddListener(Continue);
         }
 
-        private void Update()
+        /// Objects that must stay readable above everything while selecting (the card detail popup).
+        /// They are lifted without a raycaster, so they never block the pointer.
+        public void SetOverlays(params GameObject[] objects)
         {
-            // Uses the old Input class. Tell me if the project only uses the new Input System.
-            if (IsActive && allowCancel && Input.GetKeyDown(KeyCode.Escape))
-                Cancel();
+            overlays.Clear();
+            if (objects == null) return;
+
+            foreach (GameObject overlay in objects)
+                if (overlay != null) overlays.Add(overlay);
         }
 
-        /// Pick one of the lifted targets. Cancel (button or Escape) calls 'cancelled'.
+        /// Pick one of the lifted targets. A null entry in 'targets' is skipped but keeps its index.
+        /// With canCancel the banner shows a Cancel button and 'cancelled' runs when it is used.
         public void BeginPick(string title, string hint, IReadOnlyList<GameObject> targets,
-                              Action<int> picked, Action cancelled)
+                              bool canCancel, Action<int> picked, Action cancelled)
         {
-            Begin(title, hint, targets, true, false);
+            Begin(title, hint, targets, canCancel, false);
             onPicked = picked;
             onCancel = cancelled;
         }
 
-        /// Show lifted objects with a Continue button (Peek). Space is handled by the caller.
+        /// Show lifted objects with a Continue button (Peek). Not used yet.
         public void BeginReveal(string title, string hint, IReadOnlyList<GameObject> targets, Action done)
         {
             Begin(title, hint, targets, false, true);
@@ -83,7 +89,7 @@ namespace Struikrovers.Presentation
             if (!IsActive || !allowCancel) return;
             Action cancelled = onCancel;
             End();
-            cancelled?.Invoke();
+            if (cancelled != null) cancelled();
         }
 
         public void End()
@@ -113,15 +119,14 @@ namespace Struikrovers.Presentation
             SetOrder(dimCanvas, baseOrder);
             SetOrder(bannerCanvas, baseOrder + 2);
 
-            if (alwaysOnTop != null)
-                foreach (Canvas canvas in alwaysOnTop)
-                    if (canvas != null) SetOrder(canvas, baseOrder + 3);
+            foreach (GameObject overlay in overlays)
+                lifted.Add(Lift(overlay, baseOrder + 3, false, null));
 
             for (int i = 0; i < targets.Count; i++)
             {
                 if (targets[i] == null) continue;
                 int index = i;
-                lifted.Add(Lift(targets[i], baseOrder + 1, () => OnTargetClicked(index)));
+                lifted.Add(Lift(targets[i], baseOrder + 1, true, () => OnTargetClicked(index)));
             }
         }
 
@@ -139,7 +144,7 @@ namespace Struikrovers.Presentation
             canvas.sortingOrder = order;
         }
 
-        private static Lifted Lift(GameObject go, int order, Action clicked)
+        private static Lifted Lift(GameObject go, int order, bool interactive, Action clicked)
         {
             var item = new Lifted { Object = go };
 
@@ -150,6 +155,9 @@ namespace Struikrovers.Presentation
             item.OldOrder = item.Canvas.sortingOrder;
             SetOrder(item.Canvas, order);
 
+            if (!interactive)
+                return item;
+
             item.Raycaster = go.GetComponent<GraphicRaycaster>();
             if (item.Raycaster == null) { item.Raycaster = go.AddComponent<GraphicRaycaster>(); item.AddedRaycaster = true; }
 
@@ -159,6 +167,9 @@ namespace Struikrovers.Presentation
                 item.Target.Clicked = clicked;
             }
 
+            item.Card = go.GetComponent<CardView>();
+            if (item.Card != null) item.Card.SetSelectable(true);
+
             return item;
         }
 
@@ -166,6 +177,7 @@ namespace Struikrovers.Presentation
         {
             if (item.Object == null) return;
 
+            if (item.Card != null) item.Card.SetSelectable(false);
             if (item.Target != null) Destroy(item.Target);
             if (item.AddedRaycaster) Destroy(item.Raycaster);
 
@@ -183,8 +195,8 @@ namespace Struikrovers.Presentation
 
         public void OnPointerClick(PointerEventData eventData)
         {
-            if (eventData.button == PointerEventData.InputButton.Left)
-                Clicked?.Invoke();
+            if (eventData.button == PointerEventData.InputButton.Left && Clicked != null)
+                Clicked();
         }
     }
 }

@@ -124,6 +124,17 @@ RectTransform:
   m_CorrespondingSourceObject: {fileID: 1326459612930342472, guid: a2e53c85c6e662b469f094fdc471d0e7, type: 3}
   m_PrefabInstance: {fileID: 7775424416453681553}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &102686134 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 8378316621412649715, guid: a2e53c85c6e662b469f094fdc471d0e7, type: 3}
+  m_PrefabInstance: {fileID: 7775424416453681553}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a30337b8e223edc419b7c52f25e8153f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Struikrovers.Presentation::Struikrovers.Presentation.SelectionLayer
 --- !u!1001 &480595781
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -2543,6 +2554,7 @@ MonoBehaviour:
   eventLog: {fileID: 2034563824}
   cardMenu: {fileID: 1267837713}
   privacyOverlay: {fileID: 545035576}
+  selectionLayer: {fileID: 102686134}
   mapFileName: default-map.json
   deckSettings:
     handCardCopies: 3

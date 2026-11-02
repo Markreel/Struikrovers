@@ -74,7 +74,7 @@ namespace Struikrovers.Core
         }
 
         public void Play(TurnManager turn) =>
-            turn.AskDuringTurn(NabOpponentPrompt.Create(turn.Cards, turn.State, turn.TurnOwner));
+    turn.AskDuringTurn(NabPrompt.Create(turn.Cards, turn.State, turn.TurnOwner));
     }
 
     /// Steal a hand card from an opponent of your choice, blind (or with a look, with a Measuring Monocle).
@@ -94,6 +94,6 @@ namespace Struikrovers.Core
         }
 
         public void Play(TurnManager turn) =>
-            turn.AskDuringTurn(YoinkOpponentPrompt.Create(turn.Cards, turn.State, turn.TurnOwner));
+    turn.AskDuringTurn(YoinkPrompt.Create(turn.Cards, turn.State, turn.TurnOwner));
     }
 }

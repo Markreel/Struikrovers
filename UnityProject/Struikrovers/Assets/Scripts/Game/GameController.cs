@@ -23,6 +23,7 @@ namespace Struikrovers.Game
         [SerializeField] private EventLogView eventLog;
         [SerializeField] private CardMenuView cardMenu;
         [SerializeField] private PrivacyOverlayView privacyOverlay;
+        [SerializeField] private SelectionLayer selectionLayer;
 
         [Header("Map")]
         [Tooltip("Select a JSON map from Assets/StreamingAssets/Maps using the Inspector dropdown.")]
@@ -55,6 +56,7 @@ namespace Struikrovers.Game
         private int revealedTeam = -1;
         private int lastLoggedOwner = -1;
         private bool wasAnimating;
+        private DecisionPrompt selectionPrompt;
 
         private bool OverlayActive => usePrivacyOverlay && privacyOverlay != null;
         private bool InputBlocked => OverlayActive && privacyOverlay.IsVisible;
@@ -203,6 +205,13 @@ namespace Struikrovers.Game
 
             DetachTurn();
 
+            selectionPrompt = null;
+            if (selectionLayer != null)
+            {
+                selectionLayer.End();
+                selectionLayer.SetOverlays(cardDetail != null ? cardDetail.gameObject : null);
+            }
+
             var grid = new BoardGrid(map);
             state = new GameState(grid, GameConfig.TeamCount);
             clue = "";
@@ -332,6 +341,9 @@ namespace Struikrovers.Game
             if (turn == null || cardMenu == null || InputBlocked)
                 return;
 
+            if (selectionLayer != null && selectionLayer.IsActive)
+                return;
+
             if (DiceAnimating)
                 return;
 
@@ -450,11 +462,6 @@ namespace Struikrovers.Game
             boardView.Render(state, step, owner, hideEnemyBandits);
 
             DecisionPrompt prompt = step.Prompt;
-            if (promptView != null)
-            {
-                if (prompt != null) promptView.Show(prompt);
-                else promptView.Hide();
-            }
 
             if (playerPanels != null)
             {
@@ -463,9 +470,11 @@ namespace Struikrovers.Game
                     if (playerPanels[i] == null)
                         continue;
 
-                    bool handFaceUp = i == owner && !needsReveal;
+                    bool ownHand = i == owner && !needsReveal;
+                    // A hand is also shown face up while the owner picks from it with a Measuring Monocle.
+                    bool handFaceUp = ownHand || (!needsReveal && RevealsHandOf(prompt, i));
                     int panelTeam = i;
-                    System.Predicate<CardDefinition> playable = handFaceUp && !DiceAnimating
+                    System.Predicate<CardDefinition> playable = ownHand && !DiceAnimating
                         ? card => turn.CanPlayHandCard(panelTeam, card, out _)
                         : (System.Predicate<CardDefinition>)null;
 
@@ -490,14 +499,102 @@ namespace Struikrovers.Game
                 else privacyOverlay.Hide();
             }
 
+            // Panels are up to date, so the selection can find the cards it has to lift.
+            bool picking = RefreshSelection(prompt, step.CanCancel, needsReveal);
+
+            if (promptView != null)
+            {
+                if (prompt != null && !picking) promptView.Show(prompt);
+                else promptView.Hide();
+            }
+
+            string primaryLabel = prompt == null
+                ? TurnMessages.GetPrimaryLabel(turn, step)
+                : picking ? "Choose a highlighted card" : "Choose an option in the panel";
+
             hud.Show(
                 TurnMessages.BuildStatus(turn, clue),
                 theme.GetStatusBackground(turn.CurrentTeam),
-                prompt != null ? "Choose an option in the panel" : TurnMessages.GetPrimaryLabel(turn, step),
+                primaryLabel,
                 step.Primary != PrimaryAction.None,
                 step.CanCancel,
                 step.AvailableActionGroups,
                 step.SelectedActionGroup);
+        }
+
+        // True when the prompt is answered on the board, so the text panel stays hidden.
+        private bool RefreshSelection(DecisionPrompt prompt, bool canCancel, bool needsReveal)
+        {
+            if (selectionLayer == null || prompt == null || !prompt.IsBoardSelection)
+            {
+                EndSelection();
+                return false;
+            }
+
+            // Wait behind the "pass the device" screen, and keep the text panel hidden meanwhile.
+            if (needsReveal)
+            {
+                EndSelection();
+                return true;
+            }
+
+            if (prompt == selectionPrompt)
+                return true;
+
+            var targets = new List<GameObject>();
+            int found = 0;
+
+            foreach (PromptOption option in prompt.Options)
+            {
+                PromptTarget target = option.Target;
+                GameObject go = null;
+
+                if (playerPanels != null && target.Team >= 0 && target.Team < playerPanels.Length
+                    && playerPanels[target.Team] != null)
+                    go = playerPanels[target.Team].GetTargetObject(target);
+
+                targets.Add(go);
+                if (go != null) found++;
+            }
+
+            // Nothing to point at: fall back to the text panel.
+            if (found == 0)
+            {
+                EndSelection();
+                return false;
+            }
+
+            selectionPrompt = prompt;
+            string hint = (prompt.Detail ?? "") + (canCancel ? "  (Esc to cancel)" : "");
+
+            selectionLayer.BeginPick(prompt.Title, hint, targets, canCancel,
+                index => turn?.OnPromptChosen(index),
+                () => turn?.OnCancel());
+
+            return true;
+        }
+
+        private void EndSelection()
+        {
+            if (selectionPrompt == null)
+                return;
+
+            selectionPrompt = null;
+            if (selectionLayer != null) selectionLayer.End();
+        }
+
+        private static bool RevealsHandOf(DecisionPrompt prompt, int team)
+        {
+            if (prompt == null || !prompt.IsBoardSelection)
+                return false;
+
+            foreach (PromptOption option in prompt.Options)
+                if (option.Target.Kind == PromptTargetKind.HandCard
+                    && option.Target.Team == team
+                    && option.Target.RevealFace)
+                    return true;
+
+            return false;
         }
     }
 }

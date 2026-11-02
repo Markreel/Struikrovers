@@ -17,6 +17,8 @@ namespace Struikrovers.Presentation
         [SerializeField] private TMP_Text modifierLabel;
         [SerializeField] private TMP_Text placeholderLabel;
         [SerializeField] private Outline playableGlow;
+        private bool playable;
+        private bool selectable;
         private bool glowing;
 
         private VisualTheme theme;
@@ -111,10 +113,23 @@ namespace Struikrovers.Presentation
 
         public void SetPlayable(bool value)
         {
-            glowing = value;
+            playable = value;
+            ApplyGlow();
+        }
+
+        /// Highlighted while the player has to pick this card (SelectionLayer).
+        public void SetSelectable(bool value)
+        {
+            selectable = value;
+            ApplyGlow();
+        }
+
+        private void ApplyGlow()
+        {
+            glowing = playable || selectable;
 
             if (playableGlow != null)
-                playableGlow.enabled = value;
+                playableGlow.enabled = glowing;
         }
 
         private void Update()

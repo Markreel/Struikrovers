@@ -180,5 +180,34 @@ namespace Struikrovers.Presentation
                 }
             }
         }
+
+        /// The object a prompt option points at, or null when it isn't on screen.
+        public GameObject GetTargetObject(PromptTarget target)
+        {
+            switch (target.Kind)
+            {
+                case PromptTargetKind.HandCard:
+                    if (target.HandIndex >= 0 && target.HandIndex < handCards.Count
+                        && handCards[target.HandIndex].gameObject.activeSelf)
+                        return handCards[target.HandIndex].gameObject;
+                    return null;
+
+                case PromptTargetKind.Equipment:
+                    for (int i = 0; i < pawnRows.Length && i < GameConfig.TurnOrder.Length; i++)
+                    {
+                        if (GameConfig.TurnOrder[i] != target.Role)
+                            continue;
+
+                        CardView view = target.Slot == EquipmentSlot.Clothing
+                            ? pawnRows[i].clothing
+                            : pawnRows[i].weapon;
+                        return view != null ? view.gameObject : null;
+                    }
+                    return null;
+
+                default:
+                    return null;
+            }
+        }
     }
 }
