@@ -400,4 +400,68 @@ namespace Struikrovers.Core
 
         public override DecisionPrompt Choose(int index) => null;
     }
+
+    /// One Man's Trash: pick one card from the discard pile. The UI answers this in the discard
+    /// browser (see DiscardBrowserView.BeginPick). Without a browser it falls back to the text panel.
+    public sealed class OnesMansTrashPrompt : DecisionPrompt
+    {
+        private readonly CardSystem cards;
+        private readonly List<int> pileIndexes;       // option -> position in the discard pile
+        private readonly List<CardDefinition> choices; // option -> card
+
+        private OnesMansTrashPrompt(
+            CardSystem cards, int team,
+            List<int> pileIndexes, List<CardDefinition> choices, List<PromptOption> options)
+            : base(team,
+                   "One Man's Trash: pick a card",
+                   "Click a card in the discard pile to take it.",
+                   options)
+        {
+            this.cards = cards;
+            this.pileIndexes = pileIndexes;
+            this.choices = choices;
+        }
+
+        /// Null when nothing can be picked. Called after the played card landed on the discard pile.
+        public static OnesMansTrashPrompt Create(CardSystem cards, int team)
+        {
+            IReadOnlyList<CardDefinition> pile = cards.DiscardPile;
+            var pileIndexes = new List<int>();
+            var choices = new List<CardDefinition>();
+            var options = new List<PromptOption>();
+
+            // Newest first. The top card is the One Man's Trash that was just played: it can't be taken back.
+            for (int i = pile.Count - 2; i >= 0; i--)
+            {
+                CardDefinition card = pile[i];
+                if (!CardSystem.CanPickWithTrash(card))
+                    continue;
+
+                pileIndexes.Add(i);
+                choices.Add(card);
+                options.Add(new PromptOption($"Take {card.Name}: {card.Text}", card));
+            }
+
+            if (options.Count == 0)
+                return null;
+
+            return new OnesMansTrashPrompt(cards, team, pileIndexes, choices, options);
+        }
+
+        public bool IsPickable(int pileIndex) => pileIndexes.Contains(pileIndex);
+
+        /// The option for a position in the discard pile, or -1.
+        public int OptionForPileIndex(int pileIndex) => pileIndexes.IndexOf(pileIndex);
+
+        public override DecisionPrompt Choose(int index)
+        {
+            CardDefinition card = cards.TakeFromDiscardAt(Team, pileIndexes[index], choices[index]);
+
+            // Queued like a drawn or yoinked card: equip prompt or hand, and no way back after this.
+            if (card != null)
+                cards.QueueGain(Team, card);
+
+            return null;
+        }
+    }
 }

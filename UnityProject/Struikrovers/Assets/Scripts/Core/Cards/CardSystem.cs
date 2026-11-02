@@ -235,6 +235,34 @@ namespace Struikrovers.Core
             return card;
         }
 
+        /// One Man's Trash can pick anything from the discard pile except the Dragon Awakes card.
+        public static bool CanPickWithTrash(CardDefinition card) =>
+            card != null && card.Kind != CardKind.Dragon;
+
+        /// How many cards One Man's Trash could pick right now.
+        public int CountPickableDiscard()
+        {
+            int count = 0;
+
+            foreach (CardDefinition card in discardPile)
+                if (CanPickWithTrash(card))
+                    count++;
+
+            return count;
+        }
+
+        /// Takes the card at this position of the discard pile (0 = bottom). The other cards keep their
+        /// order. 'expected' guards against a stale index.
+        internal CardDefinition TakeFromDiscardAt(int team, int pileIndex, CardDefinition expected)
+        {
+            if (pileIndex < 0 || pileIndex >= discardPile.Count || discardPile[pileIndex] != expected)
+                return null;
+
+            discardPile.RemoveAt(pileIndex);
+            raise(TurnEvent.CardTakenFromDiscard(team, expected));
+            return expected;
+        }
+
         private DecisionPrompt ResolveTheft(PendingItem item)
         {
             Pawn thief = item.Thief;

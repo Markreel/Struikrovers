@@ -325,7 +325,7 @@ namespace Struikrovers.Game
 
         private void OnDiscardClicked()
         {
-            if (turn != null && discardBrowser != null && !InputBlocked)
+            if (turn != null && discardBrowser != null && !InputBlocked && !discardBrowser.IsPicking)
                 discardBrowser.Toggle(turn.Cards.DiscardPile);
         }
 
@@ -530,6 +530,14 @@ namespace Struikrovers.Game
         // True when the prompt is answered on the board, so the text panel stays hidden.
         private bool RefreshSelection(DecisionPrompt prompt, bool canCancel, bool needsReveal)
         {
+            // One Man's Trash is answered in the discard browser.
+            if (prompt is OnesMansTrashPrompt && discardBrowser != null)
+                return RefreshDiscardPick(needsReveal);
+
+            // Any other question: make sure a pick-mode browser is closed.
+            if (discardBrowser != null)
+                discardBrowser.EndPick();
+
             if (selectionLayer != null && prompt != null && prompt.RevealedBanditTeam >= 0)
                 return RefreshReveal(prompt, needsReveal);
 
@@ -639,6 +647,38 @@ namespace Struikrovers.Game
                     return true;
 
             return false;
+        }
+
+        // One Man's Trash: the discard browser opens in pick mode. Cancel (button, Esc, or closing the browser)
+        // gives the card back through the normal cancel path.
+        private bool RefreshDiscardPick(bool needsReveal)
+        {
+            EndSelection();
+
+            // Wait behind the "pass the device" screen.
+            if (needsReveal)
+            {
+                discardBrowser.EndPick();
+                return true;
+            }
+
+            if (discardBrowser.IsPicking)
+                return true;
+
+            discardBrowser.BeginPick(
+                "One Man's Trash: pick a card",
+                turn.Cards.DiscardPile,
+                pileIndex => (turn?.CurrentState?.Prompt as OnesMansTrashPrompt)?.IsPickable(pileIndex) ?? false,
+                pileIndex =>
+                {
+                    var current = turn?.CurrentState?.Prompt as OnesMansTrashPrompt;
+                    int option = current != null ? current.OptionForPileIndex(pileIndex) : -1;
+                    if (option >= 0)
+                        turn.OnPromptChosen(option);
+                },
+                () => turn?.OnCancel());
+
+            return true;
         }
     }
 }

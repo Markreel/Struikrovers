@@ -21,6 +21,7 @@ namespace Struikrovers.Core
         public const string HandOverId = "hand-over";
         public const string SwitcherooId = "switcheroo";
         public const string PeekId = "peek";
+        public const string OnesMansTrashId = "ones-mans-trash";
 
         private static readonly Dictionary<string, IHandCardEffect> effects =
             new Dictionary<string, IHandCardEffect>
@@ -31,7 +32,8 @@ namespace Struikrovers.Core
                 { YoinkId, new YoinkEffect() },
                 { HandOverId, new HandOverEffect() },
                 { SwitcherooId, new SwitcherooEffect() },
-                { PeekId, new PeekEffect() }
+                { PeekId, new PeekEffect() },
+                { OnesMansTrashId, new OnesMansTrashEffect() }
 
             };
 
@@ -176,5 +178,33 @@ namespace Struikrovers.Core
 
         public void Play(TurnManager turn) =>
             turn.AskDuringTurn(PeekPrompt.Create(turn.State, turn.TurnOwner));
+    }
+
+    /// Pick any card from the discard pile (not the Dragon, not this card) and take it.
+    internal sealed class OnesMansTrashEffect : IHandCardEffect
+    {
+        public bool CanPlay(TurnManager turn, out string reason)
+        {
+            reason = null;
+
+            // A picked equipment card is equipped straight away, which can't happen while a fight waits.
+            if (!turn.CanManageEquipment)
+            {
+                reason = "you can't take cards while a fight is waiting";
+                return false;
+            }
+
+            // This card is still in the hand here, so it is not in the discard pile yet.
+            if (turn.Cards.CountPickableDiscard() == 0)
+            {
+                reason = "the discard pile has no card you can take";
+                return false;
+            }
+
+            return true;
+        }
+
+        public void Play(TurnManager turn) =>
+            turn.AskDuringTurn(OnesMansTrashPrompt.Create(turn.Cards, turn.TurnOwner));
     }
 }

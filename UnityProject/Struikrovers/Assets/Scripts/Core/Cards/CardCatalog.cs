@@ -44,7 +44,7 @@ namespace Struikrovers.Core
             l.Add(CardDefinition.Hand("yoink", "Yoink", "Blindly steal a hand card from an opponent of your choice."));
             l.Add(CardDefinition.Hand("double-roll", "Double Roll", "After rolling a die in the roving phase, roll a second die and add both."));
             l.Add(CardDefinition.Hand("reroll", "Reroll", "Reroll any die after having rolled it."));
-            l.Add(CardDefinition.Hand("ones-mans-trash", "One Man's Trash", "Pick any card from the draw pile."));
+            l.Add(CardDefinition.Hand("ones-mans-trash", "One Man's Trash", "Pick any card from the discard pile."));
 
             // ---- Curses ----
             l.Add(CardDefinition.Curse("curse-possessed-royalty", "Curse of the Possessed Royalty", "At the end of their turn, the caster may move the target's Royalty up to 2 steps. Remove: discard 2 hand cards or 1 equipment."));
