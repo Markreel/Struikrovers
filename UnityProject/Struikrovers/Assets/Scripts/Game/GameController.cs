@@ -513,7 +513,9 @@ namespace Struikrovers.Game
 
             string primaryLabel = prompt == null
                 ? TurnMessages.GetPrimaryLabel(turn, step)
-                : picking ? "Choose a highlighted card" : "Choose an option in the panel";
+                : picking
+                    ? (prompt.RevealedBanditTeam >= 0 ? "Press Continue" : "Choose a highlighted card")
+                    : "Choose an option in the panel";
 
             hud.Show(
                 TurnMessages.BuildStatus(turn, clue),
@@ -528,6 +530,9 @@ namespace Struikrovers.Game
         // True when the prompt is answered on the board, so the text panel stays hidden.
         private bool RefreshSelection(DecisionPrompt prompt, bool canCancel, bool needsReveal)
         {
+            if (selectionLayer != null && prompt != null && prompt.RevealedBanditTeam >= 0)
+                return RefreshReveal(prompt, needsReveal);
+
             if (selectionLayer == null || prompt == null || !prompt.IsBoardSelection)
             {
                 EndSelection();
@@ -574,6 +579,41 @@ namespace Struikrovers.Game
             selectionLayer.BeginPick(prompt.Title, hint, targets, canCancel,
                 index => turn?.OnPromptChosen(index),
                 () => turn?.OnCancel());
+
+            return true;
+        }
+
+        // Peek: dim the screen, keep the peeked Bandit's tile lit, wait for Continue.
+        private bool RefreshReveal(DecisionPrompt prompt, bool needsReveal)
+        {
+            // Wait behind the "pass the device" screen, like the other selections.
+            if (needsReveal)
+            {
+                EndSelection();
+                return true;
+            }
+
+            if (prompt == selectionPrompt)
+                return true;
+
+            GameObject go = boardView.GetBanditObject(state, prompt.RevealedBanditTeam);
+
+            // Nothing to light up: fall back to the text panel.
+            if (go == null)
+            {
+                EndSelection();
+                return false;
+            }
+
+            selectionPrompt = prompt;
+
+            var targets = new List<SelectionEntry> { new SelectionEntry(go, false) };
+
+            selectionLayer.BeginReveal(
+                prompt.Title,
+                prompt.Detail ?? "",
+                targets,
+                () => turn?.OnPromptChosen(0));
 
             return true;
         }

@@ -39,7 +39,7 @@ namespace Struikrovers.Presentation
             public GameObject Object;
             public Canvas Canvas;
             public GraphicRaycaster Raycaster;
-            public bool AddedCanvas, AddedRaycaster, OldOverride;
+            public bool AddedCanvas, AddedRaycaster, OldOverride, OldRaycasterEnabled;
             public int OldOrder;
             public SelectionTarget Target;
             public CardView Card;
@@ -79,15 +79,15 @@ namespace Struikrovers.Presentation
         public void BeginPick(string title, string hint, IReadOnlyList<SelectionEntry> targets,
                               bool canCancel, Action<int> picked, Action cancelled)
         {
-            Begin(title, hint, targets, canCancel, false);
+            Begin(title, hint, targets, canCancel, false, true);
             onPicked = picked;
             onCancel = cancelled;
         }
 
-        /// Show lifted objects with a Continue button (Peek). Not used yet.
+        /// Show lifted objects, not clickable, with a Continue button (Peek).
         public void BeginReveal(string title, string hint, IReadOnlyList<SelectionEntry> targets, Action done)
         {
-            Begin(title, hint, targets, false, true);
+            Begin(title, hint, targets, false, true, false);
             onContinue = done;
         }
 
@@ -119,7 +119,7 @@ namespace Struikrovers.Presentation
         }
 
         private void Begin(string title, string hint, IReadOnlyList<SelectionEntry> targets,
-                           bool cancellable, bool hasContinue)
+                           bool cancellable, bool hasContinue, bool interactive)
         {
             End();
             IsActive = true;
@@ -141,8 +141,8 @@ namespace Struikrovers.Presentation
             {
                 if (targets[i].Object == null) continue;
                 int index = i;
-                lifted.Add(Lift(targets[i].Object, baseOrder + 1, true,
-                                () => OnTargetClicked(index), targets[i].GlowCards));
+                lifted.Add(Lift(targets[i].Object, baseOrder + 1, interactive,
+                () => OnTargetClicked(index), targets[i].GlowCards));
             }
         }
 
@@ -176,6 +176,9 @@ namespace Struikrovers.Presentation
 
             item.Raycaster = go.GetComponent<GraphicRaycaster>();
             if (item.Raycaster == null) { item.Raycaster = go.AddComponent<GraphicRaycaster>(); item.AddedRaycaster = true; }
+
+            item.OldRaycasterEnabled = item.Raycaster.enabled;
+            item.Raycaster.enabled = true;
 
             if (clicked != null)
             {
@@ -219,10 +222,28 @@ namespace Struikrovers.Presentation
                 if (forward != null) Destroy(forward);
 
             if (item.Target != null) Destroy(item.Target);
-            if (item.AddedRaycaster) Destroy(item.Raycaster);
 
-            if (item.AddedCanvas) Destroy(item.Canvas); // after the raycaster
-            else { item.Canvas.overrideSorting = item.OldOverride; item.Canvas.sortingOrder = item.OldOrder; }
+            // Components we added are removed at once, not at the end of the frame. Otherwise a selection
+            // that ends and starts again in one frame (Peek) finds a canvas that is about to die.
+            // The raycaster goes first, because it needs the canvas.
+            if (item.Raycaster != null)
+            {
+                if (item.AddedRaycaster) DestroyImmediate(item.Raycaster);
+                else item.Raycaster.enabled = item.OldRaycasterEnabled;
+            }
+
+            if (item.Canvas != null)
+            {
+                if (item.AddedCanvas)
+                {
+                    DestroyImmediate(item.Canvas);
+                }
+                else
+                {
+                    item.Canvas.overrideSorting = item.OldOverride;
+                    item.Canvas.sortingOrder = item.OldOrder;
+                }
+            }
         }
 
         private void OnDisable() { if (IsActive) End(); }

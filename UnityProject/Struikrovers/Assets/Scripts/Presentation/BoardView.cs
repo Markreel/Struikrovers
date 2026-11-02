@@ -119,6 +119,26 @@ namespace Struikrovers.Presentation
             frameCells.Clear();
         }
 
+        /// The tile (or castle) the given team's Bandit stands on, for the Peek highlight.
+        public GameObject GetBanditObject(GameState state, int team)
+        {
+            Pawn bandit = state.GetPawnByRole(team, PawnType.Bandit);
+            if (bandit == null)
+                return null;
+
+            Vector2Int position = bandit.AtCastle
+                ? state.Grid.GetCastlePosition(team)
+                : bandit.Position;
+
+            if (tiles.TryGetValue(position, out TileView tile))
+                return tile.gameObject;
+
+            if (castles.TryGetValue(position, out CastleView castle))
+                return castle.gameObject;
+
+            return null;
+        }
+
         /// Draws everything. viewerTeam is whose turn it is; with hideEnemyBandits
         /// on, other teams' Bandits and the captives they carry are not drawn
         /// (unless the Bandit is exposed).
