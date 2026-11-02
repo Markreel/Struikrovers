@@ -21,9 +21,13 @@ namespace Struikrovers.Core
 
         public override DecisionPrompt Prompt => prompt;
 
-        public override bool CanCancel => onCancel != null;
+        public override bool CanCancel => onCancel != null && prompt.AllowsCancel;
 
-        public override void OnCancel() => onCancel?.Invoke();
+        public override void OnCancel()
+        {
+            if (CanCancel)
+                onCancel();
+        }
 
         public override void OnPromptChosen(int index)
         {

@@ -365,6 +365,56 @@ namespace Struikrovers.Core
             return card;
         }
 
+        // ---- Swapping ----
+
+        /// Hand Over: the two teams swap their whole hands.
+        internal void SwapHands(int teamA, int teamB)
+        {
+            if (teamA == teamB || teamA < 0 || teamB < 0 ||
+                teamA >= state.TeamCount || teamB >= state.TeamCount)
+                return;
+
+            List<CardDefinition> a = state.Teams[teamA].hand;
+            List<CardDefinition> b = state.Teams[teamB].hand;
+
+            var copy = new List<CardDefinition>(a);
+            a.Clear();
+            a.AddRange(b);
+            b.Clear();
+            b.AddRange(copy);
+
+            raise(TurnEvent.HandsSwapped(teamA, teamB));
+        }
+
+        /// Switcheroo: two pawns of the same type swap all their equipment. Every item fits both
+        /// pawns, because pawn-specific items are tied to the type. It is a swap, not a theft,
+        /// so Martyr Shield and Chainmail don't trigger.
+        internal bool SwapEquipment(Pawn mine, Pawn theirs)
+        {
+            if (mine == null || theirs == null || mine.Team == theirs.Team ||
+                mine.BaseType != theirs.BaseType)
+                return false;
+
+            var fromMine = new CardDefinition[SlotsInOrder.Length];
+            var fromTheirs = new CardDefinition[SlotsInOrder.Length];
+
+            // Take everything off first, so no OnEquipped runs while an item is still on the other pawn.
+            for (int i = 0; i < SlotsInOrder.Length; i++)
+            {
+                fromMine[i] = Unequip(mine, SlotsInOrder[i]);
+                fromTheirs[i] = Unequip(theirs, SlotsInOrder[i]);
+            }
+
+            for (int i = 0; i < SlotsInOrder.Length; i++)
+            {
+                if (fromTheirs[i] != null) Place(mine, fromTheirs[i]);
+                if (fromMine[i] != null) Place(theirs, fromMine[i]);
+            }
+
+            raise(TurnEvent.EquipmentSwapped(mine, theirs));
+            return true;
+        }
+
         // ---- Changes (used by the prompts and later by card effects) ----
 
         internal void AddToHand(int team, CardDefinition card) => state.Teams[team].hand.Add(card);

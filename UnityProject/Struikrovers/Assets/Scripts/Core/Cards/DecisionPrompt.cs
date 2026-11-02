@@ -2,7 +2,7 @@ using System.Collections.Generic;
 
 namespace Struikrovers.Core
 {
-    public enum PromptTargetKind { None, HandCard, Equipment }
+    public enum PromptTargetKind { None, HandCard, Equipment, Panel, PawnRow }
 
     /// Where an option lives on screen, so the UI can highlight it instead of listing a button.
     public readonly struct PromptTarget
@@ -32,6 +32,15 @@ namespace Struikrovers.Core
 
         public static PromptTarget Equipment(int team, PawnType role, EquipmentSlot slot) =>
             new PromptTarget(PromptTargetKind.Equipment, team, -1, role, slot, false);
+
+        /// A whole player panel (Hand Over).
+        public static PromptTarget Panel(int team) =>
+            new PromptTarget(PromptTargetKind.Panel, team, -1,
+                             PawnType.Royalty, EquipmentSlot.Clothing, false);
+
+        /// One pawn's column in a player panel: label, both equipment cards, modifier (Switcheroo).
+        public static PromptTarget PawnRow(int team, PawnType role) =>
+            new PromptTarget(PromptTargetKind.PawnRow, team, -1, role, EquipmentSlot.Clothing, false);
     }
 
     public sealed class PromptOption
@@ -65,6 +74,12 @@ namespace Struikrovers.Core
         /// True when every option points at something on screen. The UI then highlights
         /// those things instead of showing a button per option.
         public bool IsBoardSelection { get; }
+
+        /// While this question is open, the UI shows this team's Bandit to the turn owner (Peek). -1 = none.
+        public virtual int RevealedBanditTeam => -1;
+
+        /// False when the player can no longer back out of this question.
+        public virtual bool AllowsCancel => true;
 
         protected DecisionPrompt(int team, string title, string detail, List<PromptOption> options)
         {

@@ -239,6 +239,7 @@ namespace Struikrovers.Game
 
             turn = new TurnManager(state, deckSettings);
             turn.ConfirmFightRolls = confirmFightRolls;
+            turn.HideEnemyBandits = hideEnemyBandits;
 
             if (forcedDieResult > 0)
             {
@@ -318,6 +319,7 @@ namespace Struikrovers.Game
         private void OnHideBanditsChanged(bool value)
         {
             hideEnemyBandits = value;
+            if (turn != null) turn.HideEnemyBandits = value;
             Refresh();
         }
 
@@ -459,7 +461,8 @@ namespace Struikrovers.Game
             bool needsReveal = OverlayActive && revealedTeam != owner;
 
             // Bandit hiding follows the turn owner, also during a rescue run.
-            boardView.Render(state, step, owner, hideEnemyBandits);
+            boardView.Render(state, step, owner, hideEnemyBandits,
+    step.Prompt != null ? step.Prompt.RevealedBanditTeam : -1);
 
             DecisionPrompt prompt = step.Prompt;
 
@@ -541,7 +544,7 @@ namespace Struikrovers.Game
             if (prompt == selectionPrompt)
                 return true;
 
-            var targets = new List<GameObject>();
+            var targets = new List<SelectionEntry>();
             int found = 0;
 
             foreach (PromptOption option in prompt.Options)
@@ -553,7 +556,8 @@ namespace Struikrovers.Game
                     && playerPanels[target.Team] != null)
                     go = playerPanels[target.Team].GetTargetObject(target);
 
-                targets.Add(go);
+                // A pawn row pulses its cards. A whole panel is only lifted above the dim.
+                targets.Add(new SelectionEntry(go, target.Kind == PromptTargetKind.PawnRow));
                 if (go != null) found++;
             }
 

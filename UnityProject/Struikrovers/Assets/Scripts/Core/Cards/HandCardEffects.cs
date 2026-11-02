@@ -18,6 +18,9 @@ namespace Struikrovers.Core
         public const string DoubleRollId = "double-roll";
         public const string NabId = "nab";
         public const string YoinkId = "yoink";
+        public const string HandOverId = "hand-over";
+        public const string SwitcherooId = "switcheroo";
+        public const string PeekId = "peek";
 
         private static readonly Dictionary<string, IHandCardEffect> effects =
             new Dictionary<string, IHandCardEffect>
@@ -25,7 +28,11 @@ namespace Struikrovers.Core
                 { RerollId, new RerollEffect() },
                 { DoubleRollId, new DoubleRollEffect() },
                 { NabId, new NabEffect() },
-                { YoinkId, new YoinkEffect() }
+                { YoinkId, new YoinkEffect() },
+                { HandOverId, new HandOverEffect() },
+                { SwitcherooId, new SwitcherooEffect() },
+                { PeekId, new PeekEffect() }
+
             };
 
         /// Null for cards that can't be played yet.
@@ -95,5 +102,79 @@ namespace Struikrovers.Core
 
         public void Play(TurnManager turn) =>
     turn.AskDuringTurn(YoinkPrompt.Create(turn.Cards, turn.State, turn.TurnOwner));
+    }
+
+    /// Swap whole hands with an opponent. You must hold at least 1 other hand card.
+    internal sealed class HandOverEffect : IHandCardEffect
+    {
+        public bool CanPlay(TurnManager turn, out string reason)
+        {
+            reason = null;
+
+            // The card being played is still in the hand at this point, so 2 means "1 other card".
+            if (turn.State.Teams[turn.TurnOwner].Cards < 2)
+            {
+                reason = "you need at least 1 other hand card";
+                return false;
+            }
+
+            if (!HandCardTargets.AnyOpponentHasHandCards(turn.State, turn.TurnOwner))
+            {
+                reason = "no opponent has hand cards";
+                return false;
+            }
+
+            return true;
+        }
+
+        public void Play(TurnManager turn) =>
+            turn.AskDuringTurn(HandOverPrompt.Create(turn.Cards, turn.State, turn.TurnOwner));
+    }
+
+    /// Swap an opponent pawn's equipment with your pawn of the same type. Both need at least 1 item.
+    internal sealed class SwitcherooEffect : IHandCardEffect
+    {
+        public bool CanPlay(TurnManager turn, out string reason)
+        {
+            reason = null;
+
+            // Equipment can't change while a fight waits: its modifiers are already counted.
+            if (!turn.CanManageEquipment)
+            {
+                reason = "equipment can't be swapped while a fight is waiting";
+                return false;
+            }
+
+            if (!HandCardTargets.AnySwitcheroo(turn.State, turn.TurnOwner))
+            {
+                reason = "no pawn pair has equipment on both sides";
+                return false;
+            }
+
+            return true;
+        }
+
+        public void Play(TurnManager turn) =>
+            turn.AskDuringTurn(SwitcherooPrompt.Create(turn.Cards, turn.State, turn.TurnOwner));
+    }
+
+    /// Look at another player's Bandit until you press Continue.
+    internal sealed class PeekEffect : IHandCardEffect
+    {
+        public bool CanPlay(TurnManager turn, out string reason)
+        {
+            reason = null;
+
+            if (!turn.HideEnemyBandits)
+            {
+                reason = "enemy Bandits aren't hidden, so there is nothing to peek at";
+                return false;
+            }
+
+            return true;
+        }
+
+        public void Play(TurnManager turn) =>
+            turn.AskDuringTurn(PeekPrompt.Create(turn.State, turn.TurnOwner));
     }
 }

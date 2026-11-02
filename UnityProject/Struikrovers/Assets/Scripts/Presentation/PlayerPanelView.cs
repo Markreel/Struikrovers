@@ -205,6 +205,21 @@ namespace Struikrovers.Presentation
                     }
                     return null;
 
+                case PromptTargetKind.Panel:
+                    return gameObject;
+
+                case PromptTargetKind.PawnRow:
+                    for (int i = 0; i < pawnRows.Length && i < GameConfig.TurnOrder.Length; i++)
+                    {
+                        if (GameConfig.TurnOrder[i] != target.Role)
+                            continue;
+
+                        // The column holds the label, both equipment cards and the modifier.
+                        CardView anchor = pawnRows[i].clothing;
+                        return anchor != null ? anchor.transform.parent.gameObject : null;
+                    }
+                    return null;
+
                 default:
                     return null;
             }

@@ -37,7 +37,9 @@ namespace Struikrovers.Core
         CardPlayed,
         EquipmentNabbed,
         CardYoinked,
-        CardPlayCancelled
+        CardPlayCancelled,
+        HandsSwapped,
+        EquipmentSwapped
     }
 
     /// Something worth telling the players. Core never builds message text;
@@ -215,5 +217,13 @@ namespace Struikrovers.Core
 
         public static TurnEvent CardPlayCancelled(int team, CardDefinition card) =>
     new TurnEvent(TurnEventKind.CardPlayCancelled, team: team, card: card);
+
+        /// Team = the player who played Hand Over, Amount = the team they swapped with.
+        public static TurnEvent HandsSwapped(int team, int withTeam) =>
+            new TurnEvent(TurnEventKind.HandsSwapped, amount: withTeam, team: team);
+
+        /// Actor = the player's own pawn, Target = the opponent's pawn of the same type.
+        public static TurnEvent EquipmentSwapped(Pawn mine, Pawn theirs) =>
+            new TurnEvent(TurnEventKind.EquipmentSwapped, mine, theirs, team: mine.Team);
     }
 }

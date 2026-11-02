@@ -37,7 +37,7 @@ namespace Struikrovers.Core
 
             // ---- Hand cards ----
             l.Add(CardDefinition.Hand("curse-reverse", "Curse Reverse", "Move a curse from one player to another. Cost: discard 1 other card."));
-            l.Add(CardDefinition.Hand("peek", "Peek", "Choose a player to watch them move their Bandit on their next turn."));
+            l.Add(CardDefinition.Hand("peek", "Peek", "Choose 1 other player. Their Bandit is revealed to you until you press Continue. Ask the others to close their eyes first. Cost: none."));
             l.Add(CardDefinition.Hand("hand-over", "Hand Over", "Swap hand cards with an opponent. Condition: hold at least 1 other hand card."));
             l.Add(CardDefinition.Hand("switcheroo", "Switcheroo", "Swap an opponent pawn's equipment with your pawn of the same type. Both need at least 1 item."));
             l.Add(CardDefinition.Hand("nab", "Nab", "Steal an opponent's equipped card of choice."));

@@ -7,6 +7,19 @@ using UnityEngine.UI;
 
 namespace Struikrovers.Presentation
 {
+    /// One thing the player can pick. GlowCards makes the face-up cards inside it pulse (a pawn row).
+    public readonly struct SelectionEntry
+    {
+        public readonly GameObject Object;
+        public readonly bool GlowCards;
+
+        public SelectionEntry(GameObject obj, bool glowCards)
+        {
+            Object = obj;
+            GlowCards = glowCards;
+        }
+    }
+
     /// Dims the screen and lifts chosen objects above the dim with a temporary nested Canvas,
     /// so layouts, prefabs and hierarchy stay untouched. Hovering keeps working on lifted objects.
     /// It only shows and reports clicks; the turn state decides what a click means.
@@ -30,6 +43,8 @@ namespace Struikrovers.Presentation
             public int OldOrder;
             public SelectionTarget Target;
             public CardView Card;
+            public readonly List<SelectionTarget> Forwarders = new List<SelectionTarget>();
+            public readonly List<CardView> Glowing = new List<CardView>();
         }
 
         private readonly List<Lifted> lifted = new List<Lifted>();
@@ -59,9 +74,9 @@ namespace Struikrovers.Presentation
                 if (overlay != null) overlays.Add(overlay);
         }
 
-        /// Pick one of the lifted targets. A null entry in 'targets' is skipped but keeps its index.
+        /// Pick one of the lifted targets. An entry without an object is skipped but keeps its index.
         /// With canCancel the banner shows a Cancel button and 'cancelled' runs when it is used.
-        public void BeginPick(string title, string hint, IReadOnlyList<GameObject> targets,
+        public void BeginPick(string title, string hint, IReadOnlyList<SelectionEntry> targets,
                               bool canCancel, Action<int> picked, Action cancelled)
         {
             Begin(title, hint, targets, canCancel, false);
@@ -70,7 +85,7 @@ namespace Struikrovers.Presentation
         }
 
         /// Show lifted objects with a Continue button (Peek). Not used yet.
-        public void BeginReveal(string title, string hint, IReadOnlyList<GameObject> targets, Action done)
+        public void BeginReveal(string title, string hint, IReadOnlyList<SelectionEntry> targets, Action done)
         {
             Begin(title, hint, targets, false, true);
             onContinue = done;
@@ -103,7 +118,7 @@ namespace Struikrovers.Presentation
             if (root != null) root.SetActive(false);
         }
 
-        private void Begin(string title, string hint, IReadOnlyList<GameObject> targets,
+        private void Begin(string title, string hint, IReadOnlyList<SelectionEntry> targets,
                            bool cancellable, bool hasContinue)
         {
             End();
@@ -120,13 +135,14 @@ namespace Struikrovers.Presentation
             SetOrder(bannerCanvas, baseOrder + 2);
 
             foreach (GameObject overlay in overlays)
-                lifted.Add(Lift(overlay, baseOrder + 3, false, null));
+                lifted.Add(Lift(overlay, baseOrder + 3, false, null, false));
 
             for (int i = 0; i < targets.Count; i++)
             {
-                if (targets[i] == null) continue;
+                if (targets[i].Object == null) continue;
                 int index = i;
-                lifted.Add(Lift(targets[i], baseOrder + 1, true, () => OnTargetClicked(index)));
+                lifted.Add(Lift(targets[i].Object, baseOrder + 1, true,
+                                () => OnTargetClicked(index), targets[i].GlowCards));
             }
         }
 
@@ -144,7 +160,7 @@ namespace Struikrovers.Presentation
             canvas.sortingOrder = order;
         }
 
-        private static Lifted Lift(GameObject go, int order, bool interactive, Action clicked)
+        private static Lifted Lift(GameObject go, int order, bool interactive, Action clicked, bool glowCards)
         {
             var item = new Lifted { Object = go };
 
@@ -165,6 +181,23 @@ namespace Struikrovers.Presentation
             {
                 item.Target = go.AddComponent<SelectionTarget>();
                 item.Target.Clicked = clicked;
+
+                // A panel or a pawn row is clicked through the cards inside it, and a card
+                // handles the click itself. Every card inside passes the click on.
+                foreach (CardView inner in go.GetComponentsInChildren<CardView>(true))
+                {
+                    if (inner.gameObject == go) continue;
+
+                    SelectionTarget forward = inner.gameObject.AddComponent<SelectionTarget>();
+                    forward.Clicked = clicked;
+                    item.Forwarders.Add(forward);
+
+                    if (glowCards && inner.Card != null)
+                    {
+                        inner.SetSelectable(true);
+                        item.Glowing.Add(inner);
+                    }
+                }
             }
 
             item.Card = go.GetComponent<CardView>();
@@ -178,6 +211,13 @@ namespace Struikrovers.Presentation
             if (item.Object == null) return;
 
             if (item.Card != null) item.Card.SetSelectable(false);
+
+            foreach (CardView glowing in item.Glowing)
+                if (glowing != null) glowing.SetSelectable(false);
+
+            foreach (SelectionTarget forward in item.Forwarders)
+                if (forward != null) Destroy(forward);
+
             if (item.Target != null) Destroy(item.Target);
             if (item.AddedRaycaster) Destroy(item.Raycaster);
 
@@ -188,7 +228,7 @@ namespace Struikrovers.Presentation
         private void OnDisable() { if (IsActive) End(); }
     }
 
-    /// Added at runtime to anything that can be picked.
+    /// Added at runtime to anything that can be picked, and to the cards inside a picked panel or row.
     internal sealed class SelectionTarget : MonoBehaviour, IPointerClickHandler
     {
         public Action Clicked;

@@ -569,7 +569,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5749244693319691846, guid: 783f9cb7566a09a44b36e63897bd7ae9, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: -0.0000010728836
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 6133758008690799259, guid: 783f9cb7566a09a44b36e63897bd7ae9, type: 3}
       propertyPath: m_AnchorMax.y
@@ -1575,7 +1575,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5749244693319691846, guid: 783f9cb7566a09a44b36e63897bd7ae9, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: -0.0000010728836
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 6133758008690799259, guid: 783f9cb7566a09a44b36e63897bd7ae9, type: 3}
       propertyPath: m_AnchorMax.y
@@ -2567,12 +2567,11 @@ MonoBehaviour:
     seed: 1
     topCards:
     - yoink
-    - yoink
-    - yoink
-    - nab
-    - nab
     - nab
     - measuring-monocle
+    - switcheroo
+    - peek
+    - hand-over
     debugCurses: []
   hideEnemyBandits: 0
   usePrivacyOverlay: 1

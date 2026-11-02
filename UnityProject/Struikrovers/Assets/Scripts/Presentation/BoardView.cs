@@ -122,14 +122,14 @@ namespace Struikrovers.Presentation
         /// Draws everything. viewerTeam is whose turn it is; with hideEnemyBandits
         /// on, other teams' Bandits and the captives they carry are not drawn
         /// (unless the Bandit is exposed).
-        public void Render(GameState state, ITurnState step, int viewerTeam, bool hideEnemyBandits)
+        public void Render(GameState state, ITurnState step, int viewerTeam, bool hideEnemyBandits, int peekedTeam = -1)
         {
             if (tiles.Count == 0)
                 return;
 
             BoardGrid grid = state.Grid;
             Dictionary<Vector2Int, List<PawnMarker>> markers =
-                BuildMarkers(state, viewerTeam, hideEnemyBandits);
+                BuildMarkers(state, viewerTeam, hideEnemyBandits, peekedTeam);
 
             HashSet<Vector2Int> destinations = ToSet(step?.Destinations);
             HashSet<Vector2Int> moveFightTargets = ToSet(step?.MoveFightTargets);
@@ -214,13 +214,13 @@ namespace Struikrovers.Presentation
 
         // A Bandit is visible to its own team, to everyone when hiding is off, and to
         // everyone while it is exposed (its tree was chopped).
-        private static bool CanSee(Pawn bandit, int viewerTeam, bool hideEnemyBandits) =>
-            !hideEnemyBandits || bandit.Team == viewerTeam || bandit.IsExposed;
+        private static bool CanSee(Pawn bandit, int viewerTeam, bool hideEnemyBandits, int peekedTeam) =>
+      !hideEnemyBandits || bandit.Team == viewerTeam || bandit.IsExposed || bandit.Team == peekedTeam;
 
         // Captives are drawn on their captor's tile as Royalty tokens. A hidden
         // Bandit hides its captives too, since they would give it away.
         private static Dictionary<Vector2Int, List<PawnMarker>> BuildMarkers(
-            GameState state, int viewerTeam, bool hideEnemyBandits)
+            GameState state, int viewerTeam, bool hideEnemyBandits, int peekedTeam)
         {
             var lookup = new Dictionary<Vector2Int, List<PawnMarker>>();
 
@@ -240,7 +240,7 @@ namespace Struikrovers.Presentation
                 if (pawn.AtCastle)
                     continue;
 
-                if (pawn.Type == PawnType.Bandit && !CanSee(pawn, viewerTeam, hideEnemyBandits))
+                if (pawn.Type == PawnType.Bandit && !CanSee(pawn, viewerTeam, hideEnemyBandits, peekedTeam))
                     continue;
 
                 Add(pawn.Position, new PawnMarker(pawn.Team, pawn.Type, false));
@@ -251,7 +251,7 @@ namespace Struikrovers.Presentation
                 if (bandit.Type != PawnType.Bandit || bandit.AtCastle)
                     continue;
 
-                if (!CanSee(bandit, viewerTeam, hideEnemyBandits))
+                if (!CanSee(bandit, viewerTeam, hideEnemyBandits, peekedTeam))
                     continue;
 
                 foreach (Pawn captive in bandit.Captives)

@@ -70,6 +70,9 @@ namespace Struikrovers.Core
         /// with ties rolled again automatically. Handy for solo testing.
         public bool ConfirmFightRolls { get; set; } = true;
 
+        /// Mirrors the "Hide enemy Bandits" setting. Peek needs it on. Set by the GameController.
+        public bool HideEnemyBandits { get; set; }
+
         /// Replace this to force die results while testing. Used for every die.
         public Func<int> DieRoller { get; set; }
 

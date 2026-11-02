@@ -41,6 +41,45 @@ namespace Struikrovers.Core
 
             return false;
         }
+
+        public static bool HasEquipment(Pawn pawn) =>
+    pawn != null && (pawn.Equipment.Clothing != null || pawn.Equipment.Weapon != null);
+
+        /// Your pawn and the opponent's pawn of the same type, when both wear something.
+        public static bool TryGetSwitchPair(
+            GameState state, int team, int opponent, PawnType role, out Pawn mine, out Pawn theirs)
+        {
+            mine = state.GetPawnByRole(team, role);
+            theirs = state.GetPawnByRole(opponent, role);
+            return HasEquipment(mine) && HasEquipment(theirs);
+        }
+
+        public static bool AnySwitcheroo(GameState state, int team)
+        {
+            for (int t = 0; t < state.TeamCount; t++)
+            {
+                if (t == team)
+                    continue;
+
+                foreach (PawnType role in GameConfig.TurnOrder)
+                    if (TryGetSwitchPair(state, team, t, role, out _, out _))
+                        return true;
+            }
+
+            return false;
+        }
+
+        public static bool AnyOpponent(GameState state, int team) => state.TeamCount > 1;
+
+        public static string DescribeEquipment(Pawn pawn)
+        {
+            string text = "";
+
+            foreach (CardDefinition item in pawn.Equipment.Items)
+                text += (text.Length > 0 ? " + " : "") + item.Name;
+
+            return text;
+        }
     }
 
     /// Nab: pick any equipped card of any opponent, straight on the board.
@@ -178,5 +217,187 @@ namespace Struikrovers.Core
             cards.Yoink(Team, victims[index], handIndexes[index]);
             return null;
         }
+    }
+
+    /// Hand Over: click an opponent's panel to swap whole hands with them.
+    public sealed class HandOverPrompt : DecisionPrompt
+    {
+        private readonly CardSystem cards;
+        private readonly List<int> opponents;
+
+        private HandOverPrompt(CardSystem cards, int team, List<int> opponents, List<PromptOption> options)
+            : base(team,
+                   "Hand Over: swap hands",
+                   "Click the player you want to swap hands with. Everyone keeps the other's whole hand.",
+                   options)
+        {
+            this.cards = cards;
+            this.opponents = opponents;
+        }
+
+        /// Null when there is no opponent.
+        public static HandOverPrompt Create(CardSystem cards, GameState state, int team)
+        {
+            var opponents = new List<int>();
+            var options = new List<PromptOption>();
+
+            for (int t = 0; t < state.TeamCount; t++)
+            {
+                if (t == team || state.Teams[t].Cards == 0)
+                    continue;
+
+                opponents.Add(t);
+                options.Add(new PromptOption(
+                    $"Swap hands with Player {t + 1} ({state.Teams[t].Cards} card(s))",
+                    null,
+                    PromptTarget.Panel(t)));
+            }
+
+            if (options.Count == 0)
+                return null;
+
+            return new HandOverPrompt(cards, team, opponents, options);
+        }
+
+        public override DecisionPrompt Choose(int index)
+        {
+            cards.SwapHands(Team, opponents[index]);
+            return null;
+        }
+    }
+
+    /// Switcheroo: click an opponent's pawn. It swaps all equipment with your pawn of the same type.
+    /// Only pawns where both sides wear something can be picked.
+    public sealed class SwitcherooPrompt : DecisionPrompt
+    {
+        private readonly CardSystem cards;
+        private readonly List<Pawn> mine;
+        private readonly List<Pawn> theirs;
+
+        private SwitcherooPrompt(
+            CardSystem cards, int team, List<Pawn> mine, List<Pawn> theirs, List<PromptOption> options)
+            : base(team,
+                   "Switcheroo: swap equipment",
+                   "Click an opponent's pawn to swap all its equipment with your pawn of the same type.",
+                   options)
+        {
+            this.cards = cards;
+            this.mine = mine;
+            this.theirs = theirs;
+        }
+
+        /// Null when no pawn pair qualifies.
+        public static SwitcherooPrompt Create(CardSystem cards, GameState state, int team)
+        {
+            var mine = new List<Pawn>();
+            var theirs = new List<Pawn>();
+            var options = new List<PromptOption>();
+
+            for (int t = 0; t < state.TeamCount; t++)
+            {
+                if (t == team)
+                    continue;
+
+                foreach (PawnType role in GameConfig.TurnOrder)
+                {
+                    if (!HandCardTargets.TryGetSwitchPair(state, team, t, role, out Pawn own, out Pawn other))
+                        continue;
+
+                    mine.Add(own);
+                    theirs.Add(other);
+                    options.Add(new PromptOption(
+                        $"Swap your {role} ({HandCardTargets.DescribeEquipment(own)}) with " +
+                        $"Player {t + 1}'s {role} ({HandCardTargets.DescribeEquipment(other)})",
+                        null,
+                        PromptTarget.PawnRow(t, role)));
+                }
+            }
+
+            if (options.Count == 0)
+                return null;
+
+            return new SwitcherooPrompt(cards, team, mine, theirs, options);
+        }
+
+        public override DecisionPrompt Choose(int index)
+        {
+            cards.SwapEquipment(mine[index], theirs[index]);
+            return null;
+        }
+    }
+
+    /// Peek, step 1: pick the player whose Bandit you want to see.
+    public sealed class PeekPrompt : DecisionPrompt
+    {
+        private readonly GameState state;
+        private readonly List<int> targets;
+
+        private PeekPrompt(GameState state, int team, List<int> targets, List<PromptOption> options)
+            : base(team,
+                   "Peek: choose a player",
+                   "First ask the other players to close their eyes. Then click the player whose Bandit you want to see.",
+                   options)
+        {
+            this.state = state;
+            this.targets = targets;
+        }
+
+        /// Null when there is no other player.
+        public static PeekPrompt Create(GameState state, int team)
+        {
+            var targets = new List<int>();
+            var options = new List<PromptOption>();
+
+            for (int t = 0; t < state.TeamCount; t++)
+            {
+                if (t == team)
+                    continue;
+
+                targets.Add(t);
+                options.Add(new PromptOption(
+                    $"Peek at Player {t + 1}'s Bandit",
+                    null,
+                    PromptTarget.Panel(t)));
+            }
+
+            if (options.Count == 0)
+                return null;
+
+            return new PeekPrompt(state, team, targets, options);
+        }
+
+        public override DecisionPrompt Choose(int index) =>
+            PeekRevealPrompt.Create(state, Team, targets[index]);
+    }
+
+    /// Peek, step 2: the Bandit is shown on the board until the player presses Continue.
+    public sealed class PeekRevealPrompt : DecisionPrompt
+    {
+        private readonly int target;
+
+        private PeekRevealPrompt(int team, int target, string detail, List<PromptOption> options)
+            : base(team, $"Peek: Player {target + 1}'s Bandit", detail, options)
+        {
+            this.target = target;
+        }
+
+        public static PeekRevealPrompt Create(GameState state, int team, int target)
+        {
+            Pawn bandit = state.GetPawnByRole(target, PawnType.Bandit);
+
+            string detail = bandit != null && bandit.AtCastle
+                ? $"Player {target + 1}'s Bandit is in their castle. Press Continue when you are done."
+                : $"Player {target + 1}'s Bandit is shown on the board. Press Continue when you have seen it. It is hidden again after that.";
+
+            var options = new List<PromptOption> { new PromptOption("Continue") };
+
+            return new PeekRevealPrompt(team, target, detail, options);
+        }
+
+        public override int RevealedBanditTeam => target;
+
+        public override bool AllowsCancel => false;
+
+        public override DecisionPrompt Choose(int index) => null;
     }
 }

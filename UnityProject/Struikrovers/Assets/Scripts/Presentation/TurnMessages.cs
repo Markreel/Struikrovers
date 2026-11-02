@@ -230,6 +230,20 @@ namespace Struikrovers.Presentation
                 case TurnEventKind.CardPlayCancelled:
                     return new TurnMessage(null, $"Player {e.Team + 1} took {e.Card.Name} back into their hand.");
 
+                case TurnEventKind.HandsSwapped:
+                    {
+                        string clue = $"Player {e.Team + 1} swapped hands with Player {e.Amount + 1}.";
+                        return new TurnMessage(clue, clue);
+                    }
+
+                case TurnEventKind.EquipmentSwapped:
+                    {
+                        string clue =
+                            $"Player {e.Actor.Team + 1}'s {e.Actor.BaseType} and " +
+                            $"Player {e.Target.Team + 1}'s {e.Target.BaseType} swapped all their equipment.";
+                        return new TurnMessage(clue, clue);
+                    }
+
                 default:
                     return new TurnMessage(null);
             }
