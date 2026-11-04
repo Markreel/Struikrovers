@@ -108,14 +108,14 @@ namespace Struikrovers.Core
         /// that are left once it has reached the Royalty. Empty when there is no legal ending tile
         /// (no bush, tree or own castle within the remaining steps).
         private HashSet<Vector2Int> GetPostAbductionDestinations(
-            Pawn bandit, Vector2Int royaltyPosition, int stepsToRoyalty, int movementSteps)
+     Pawn bandit, Vector2Int royaltyPosition, int stepsToRoyalty, int movementSteps)
         {
             int remaining = movementSteps - stepsToRoyalty;
 
-            // The Bandit will be carrying a captive, so its own castle is a destination.
+            // Once the Royalty is taken, the Bandit carries a captive: no movement equipment, own castle allowed.
             return movement.GetBanditDestinations(
                 royaltyPosition, remaining, bandit.Team, carrying: true,
-                perks: EquipmentEffects.GetMovementPerks(bandit));
+                perks: MovementPerks.None);
         }
 
         /// Tiles holding an enemy Royalty that the Bandit can reach with this movement AND from
@@ -159,11 +159,14 @@ namespace Struikrovers.Core
             plan = default;
 
             Pawn royalty = state.GetRoyaltyAt(royaltyPosition);
-            if (bandit == null || royalty == null || royalty.Team == bandit.Team)
+            if (bandit == null || royalty == null || royalty.Team == bandit.Team ||
+                !state.CanCarryMore(bandit))
                 return false;
 
-            Dictionary<Vector2Int, int> distances =
-                movement.GetBanditDistances(bandit.Position, movementSteps);
+            // Same perks as GetTargets, otherwise a Royalty that is only reachable
+            // with movement equipment is shown but can't be selected.
+            Dictionary<Vector2Int, int> distances = movement.GetBanditDistances(
+                bandit.Position, movementSteps, perks: EquipmentEffects.GetMovementPerks(bandit));
 
             if (!distances.TryGetValue(royalty.Position, out int steps))
                 return false;

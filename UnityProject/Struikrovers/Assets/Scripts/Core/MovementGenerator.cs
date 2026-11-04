@@ -31,16 +31,20 @@ namespace Struikrovers.Core
         private int[,] clusterOf;
         private List<List<Vector2Int>> clusters;
 
-        public MoveGenerator(BoardGrid grid, MovementPerks perks, Func<Vector2Int, bool> canEnter)
+        private readonly Func<Vector2Int, bool> canBolt;
+
+        public MoveGenerator(BoardGrid grid, MovementPerks perks, Func<Vector2Int, bool> canEnter,
+                             Func<Vector2Int, bool> canBolt = null)
         {
             this.grid = grid;
             this.perks = perks;
             this.canEnter = canEnter;
+            this.canBolt = canBolt ?? canEnter;
         }
 
         private bool Has(MovementPerks perk) => (perks & perk) != 0;
 
-        public void Collect(Vector2Int from, List<MoveStep> moves)
+        public void Collect(Vector2Int from, List<MoveStep> moves, int lastDirection = -1)
         {
             Vector2Int[] directions = BoardGrid.Directions;
 
@@ -108,6 +112,27 @@ namespace Struikrovers.Core
                     if (tile != from && grid.GetTerrain(tile).IsHidingPlace() && canEnter(tile))
                         moves.Add(new MoveStep(tile, -1));
                 }
+            }
+
+            // Bolting Boots: right after an ordinary step in direction d, shoot the opposite way, through
+            // the tile the pawn came from, until the next tile is not open. The step back tile has to be
+            // open too. A shot that only reaches the tile it came from is just a normal step, so skip it.
+            // The shot is a jump (Direction -1): another shot can only follow after a normal step.
+            if (Has(MovementPerks.BoltingBoots) && lastDirection >= 0 && canBolt(from))
+            {
+                Vector2Int shot = -directions[lastDirection];
+                Vector2Int landing = from;
+                int length = 0;
+                int limit = grid.Columns + grid.Rows;
+
+                while (length < limit && canBolt(landing + shot))
+                {
+                    landing += shot;
+                    length++;
+                }
+
+                if (length >= 2)
+                    moves.Add(new MoveStep(landing, -1));
             }
         }
 

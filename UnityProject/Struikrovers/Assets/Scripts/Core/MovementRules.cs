@@ -27,6 +27,12 @@ namespace Struikrovers.Core
         public bool CanBanditEnd(Vector2Int p) =>
             grid.InBounds(p) && grid.GetTerrain(p).IsHidingPlace();
 
+        /// Thorny Trunk: a stump is a legal ending tile too.
+        public bool CanBanditEnd(Vector2Int p, int team, bool carrying, MovementPerks perks) =>
+            CanBanditEnd(p, team, carrying) ||
+            ((perks & MovementPerks.ThornyTrunk) != 0 &&
+             grid.InBounds(p) && grid.GetTerrain(p) == TerrainType.Stump);
+
         private bool IsOwnCastle(Vector2Int p, int team) =>
             team >= 0 && p == grid.GetCastlePosition(team);
 
@@ -51,7 +57,7 @@ namespace Struikrovers.Core
                 return destinations;
 
             foreach (var entry in GetBanditDistances(start, maxSteps, team, carrying, perks))
-                if (CanBanditEnd(entry.Key, team, carrying))
+                if (CanBanditEnd(entry.Key, team, carrying, perks))
                     destinations.Add(entry.Key);
 
             return destinations;
@@ -67,12 +73,13 @@ namespace Struikrovers.Core
 
             if (pawn.Type == PawnType.Bandit)
             {
+                MovementPerks perks = EquipmentEffects.GetMovementPerks(pawn);
+
                 var distances = Pathfinder.GetDistances(
-                    pawn.Position, movement, BanditPassable(pawn.Team, pawn.IsCarrying), 0, null,
-                    EquipmentEffects.GetMovementPerks(pawn));
+                    pawn.Position, movement, BanditPassable(pawn.Team, pawn.IsCarrying), 0, null, perks);
 
                 foreach (Vector2Int p in distances.Keys)
-                    if (CanBanditEnd(p, pawn.Team, pawn.IsCarrying))
+                    if (CanBanditEnd(p, pawn.Team, pawn.IsCarrying, perks))
                         result.Add(p);
 
                 return result;
@@ -125,45 +132,49 @@ namespace Struikrovers.Core
 
             int team = squire.Team;
 
-            // The Squire's own movement items (diagonals, Stump Stompers jumps) apply here too.
-            MoveGenerator moves = Pathfinder.CreateMoves(
-                EquipmentEffects.GetMovementPerks(squire), CanWalkerEnter);
+            // The Squire's own movement items (diagonals, jumps, Bolting Boots shots) apply here too.
+            MovementPerks perks = EquipmentEffects.GetMovementPerks(squire);
+            bool bolting = (perks & MovementPerks.BoltingBoots) != 0;
+            MoveGenerator moves = Pathfinder.CreateMoves(perks, CanWalkerEnter, GetBoltOpen(squire));
             var stepBuffer = new List<MoveStep>();
 
-            // Layer s holds the fewest fights needed to stand on a tile after exactly s steps.
-            var fightsByLayer = new List<Dictionary<Vector2Int, int>>
-            {
-                new Dictionary<Vector2Int, int> { [squire.Position] = 0 }
-            };
-            var parentsByLayer = new List<Dictionary<Vector2Int, Vector2Int>>
-            {
-                new Dictionary<Vector2Int, Vector2Int>()
-            };
+            // Layer s holds the fewest fights needed to stand on a node after exactly s steps.
+            var start = new PathNode(squire.Position, -1);
+            var fightsByLayer = new List<Dictionary<PathNode, int>>
+    {
+        new Dictionary<PathNode, int> { [start] = 0 }
+    };
+            var parentsByLayer = new List<Dictionary<PathNode, PathNode>>
+    {
+        new Dictionary<PathNode, PathNode>()
+    };
 
             var bestFights = new Dictionary<Vector2Int, int>();
             var bestLayer = new Dictionary<Vector2Int, int>();
+            var bestNode = new Dictionary<Vector2Int, PathNode>();
 
             for (int s = 1; s <= movement; s++)
             {
-                var layer = new Dictionary<Vector2Int, int>();
-                var parents = new Dictionary<Vector2Int, Vector2Int>();
+                var layer = new Dictionary<PathNode, int>();
+                var parents = new Dictionary<PathNode, PathNode>();
 
                 foreach (var entry in fightsByLayer[s - 1])
                 {
                     stepBuffer.Clear();
-                    moves.Collect(entry.Key, stepBuffer);
+                    moves.Collect(entry.Key.Position, stepBuffer, entry.Key.Direction);
 
                     foreach (MoveStep move in stepBuffer)
                     {
                         Vector2Int next = move.To;
-
                         int fights = entry.Value + (state.HasEnemySquireAt(next, team) ? 1 : 0);
 
-                        if (layer.TryGetValue(next, out int existing) && existing <= fights)
+                        var node = new PathNode(next, bolting ? move.Direction : -1);
+
+                        if (layer.TryGetValue(node, out int existing) && existing <= fights)
                             continue;
 
-                        layer[next] = fights;
-                        parents[next] = entry.Key;
+                        layer[node] = fights;
+                        parents[node] = entry.Key;
                     }
                 }
 
@@ -172,10 +183,13 @@ namespace Struikrovers.Core
 
                 foreach (var entry in layer)
                 {
-                    if (!bestFights.TryGetValue(entry.Key, out int best) || entry.Value < best)
+                    Vector2Int tile = entry.Key.Position;
+
+                    if (!bestFights.TryGetValue(tile, out int best) || entry.Value < best)
                     {
-                        bestFights[entry.Key] = entry.Value;
-                        bestLayer[entry.Key] = s;
+                        bestFights[tile] = entry.Value;
+                        bestLayer[tile] = s;
+                        bestNode[tile] = entry.Key;
                     }
                 }
             }
@@ -197,11 +211,11 @@ namespace Struikrovers.Core
                 // Walk the route back from the destination to the start.
                 int steps = bestLayer[tile];
                 var route = new List<Vector2Int>();
-                Vector2Int current = tile;
+                PathNode current = bestNode[tile];
 
                 for (int s = steps; s > 0; s--)
                 {
-                    route.Add(current);
+                    route.Add(current.Position);
                     current = parentsByLayer[s][current];
                 }
 
@@ -229,8 +243,32 @@ namespace Struikrovers.Core
                 : null;
 
             return Pathfinder.GetDistances(
-                pawn.Position, movement, CanWalkerEnter, 0, blocksFurther,
-                EquipmentEffects.GetMovementPerks(pawn));
+    pawn.Position, movement, CanWalkerEnter, 0, blocksFurther,
+    EquipmentEffects.GetMovementPerks(pawn), GetBoltOpen(pawn));
+        }
+
+        /// Tiles a Bolting Boots shot may cross and land on: open grass without an enemy pawn.
+        public Func<Vector2Int, bool> GetBoltOpen(Pawn pawn)
+        {
+            int team = pawn.Team;
+            return p => CanWalkerEnter(p) && !state.HasEnemyPawnAt(p, team);
+        }
+
+        // A tile plus the direction of the last ordinary step (-1 when Bolting Boots aren't worn).
+        private readonly struct PathNode : IEquatable<PathNode>
+        {
+            public readonly Vector2Int Position;
+            public readonly int Direction;
+
+            public PathNode(Vector2Int position, int direction)
+            {
+                Position = position;
+                Direction = direction;
+            }
+
+            public bool Equals(PathNode other) => Position == other.Position && Direction == other.Direction;
+            public override bool Equals(object obj) => obj is PathNode other && Equals(other);
+            public override int GetHashCode() => Position.GetHashCode() * 397 ^ Direction;
         }
     }
 }

@@ -2566,13 +2566,13 @@ MonoBehaviour:
     endOfTurnDraws: 1
     seed: 1
     topCards:
-    - tumbling-tunic
     - bolting-boots
     - bush-dashers
     - skipping-shoes
     - tree-swingers
     - slanted-slippers
     - thorny-trunk
+    - stump-stompers
     - stump-stompers
     debugCurses: []
   hideEnemyBandits: 0

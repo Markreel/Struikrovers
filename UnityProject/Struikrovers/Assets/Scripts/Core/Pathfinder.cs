@@ -11,10 +11,13 @@ namespace Struikrovers.Core
 
         public Pathfinder(BoardGrid grid) { this.grid = grid; }
 
+        private bool IsTreeTile(Vector2Int p) => grid.InBounds(p) && grid.GetTerrain(p).IsTree();
+
         /// Moves from a tile with these movement items applied. Used by the search below and by
         /// MovementRules' fight-through search.
-        public MoveGenerator CreateMoves(MovementPerks perks, Func<Vector2Int, bool> canEnter) =>
-            new MoveGenerator(grid, perks, canEnter);
+        public MoveGenerator CreateMoves(MovementPerks perks, Func<Vector2Int, bool> canEnter,
+                                     Func<Vector2Int, bool> canBolt = null) =>
+        new MoveGenerator(grid, perks, canEnter, canBolt);
 
         // Where the search is: a tile, plus (for Skipping Shoes only) the direction of the last
         // step and whether the run of steps in that direction has an odd length so far.
@@ -49,10 +52,13 @@ namespace Struikrovers.Core
             Vector2Int start, int maxSteps,
             Func<Vector2Int, bool> canEnter, int startCost = 0,
             Func<Vector2Int, bool> blocksFurther = null,
-            MovementPerks perks = MovementPerks.None)
+            MovementPerks perks = MovementPerks.None,
+            Func<Vector2Int, bool> canBolt = null)
         {
             bool skipping = (perks & MovementPerks.SkippingShoes) != 0;
-            MoveGenerator generator = CreateMoves(perks, canEnter);
+            bool swinging = (perks & MovementPerks.TreeSwingers) != 0;
+            bool bolting = (perks & MovementPerks.BoltingBoots) != 0;
+            MoveGenerator generator = CreateMoves(perks, canEnter, canBolt);
 
             var distance = new Dictionary<Vector2Int, int> { [start] = startCost };
             var best = new Dictionary<SearchState, int>();
@@ -86,7 +92,7 @@ namespace Struikrovers.Core
                         continue;
 
                     moves.Clear();
-                    generator.Collect(state.Position, moves);
+                    generator.Collect(state.Position, moves, state.Direction);
 
                     foreach (MoveStep move in moves)
                     {
@@ -94,17 +100,21 @@ namespace Struikrovers.Core
                         int direction = -1;
                         bool odd = false;
 
-                        if (skipping && move.Direction >= 0)
+                        if (swinging && IsTreeTile(state.Position) && !IsTreeTile(move.To))
                         {
+                            stepCost = 0; // Tree Swingers: leaving a tree for a non-tree tile is free
+                        }
+                        else if (move.Direction >= 0 && (skipping || bolting))
+                        {
+                            // Skipping Shoes and Bolting Boots both need the direction of the last ordinary step.
                             direction = move.Direction;
 
-                            if (direction == state.Direction && state.Odd)
+                            if (skipping)
                             {
-                                stepCost = 0; // the 2nd step of the pair is free
-                            }
-                            else
-                            {
-                                odd = true;   // first step of a new pair
+                                if (direction == state.Direction && state.Odd)
+                                    stepCost = 0; // the 2nd step of the pair is free
+                                else
+                                    odd = true;   // first step of a new pair
                             }
                         }
 

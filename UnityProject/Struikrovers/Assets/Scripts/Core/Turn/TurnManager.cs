@@ -523,6 +523,8 @@ namespace Struikrovers.Core
                         Raise(TurnEvent.AttackBlocked(pawn, fight.Blocked));
 
                     bool survived = !pawn.AtCastle;
+                    if (survived)
+                        ExposeIfOnStump(pawn);
 
                     if (fight.ReleasedCount > 0)
                     {
@@ -549,6 +551,7 @@ namespace Struikrovers.Core
         // Delivery, then stolen equipment is resolved (prompts), then the action phase.
         private void FinishMovement(Pawn pawn)
         {
+            ExposeIfOnStump(pawn);
             ResolveDelivery(pawn);
             RunPending(EndMovement);
         }
@@ -694,6 +697,19 @@ namespace Struikrovers.Core
         {
             if (CurrentState is ChooseDestinationState choose)
                 choose.Refresh();
+        }
+
+        // A Bandit that stops on a stump (Thorny Trunk) isn't hidden: everyone sees it and it can be stabbed.
+        private void ExposeIfOnStump(Pawn pawn)
+        {
+            if (pawn == null || pawn.Type != PawnType.Bandit || pawn.AtCastle || pawn.IsExposed)
+                return;
+
+            if (State.Grid.GetTerrain(pawn.Position) != TerrainType.Stump)
+                return;
+
+            pawn.IsExposed = true;
+            Raise(TurnEvent.BanditExposed(pawn));
         }
     }
 }

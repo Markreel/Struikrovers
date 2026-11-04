@@ -72,6 +72,9 @@ namespace Struikrovers.Core
             Register("bush-dashers", new MovementPerkEffect(MovementPerks.BushDashers));
             Register("stump-stompers", new MovementPerkEffect(MovementPerks.StumpStompers));
             Register("slanted-slippers", new MovementPerkEffect(MovementPerks.SlantedSlippers));
+            Register("thorny-trunk", new MovementPerkEffect(MovementPerks.ThornyTrunk));
+            Register("tree-swingers", new MovementPerkEffect(MovementPerks.TreeSwingers));
+            Register("bolting-boots", new MovementPerkEffect(MovementPerks.BoltingBoots));
         }
 
         public static void Register(string cardId, IEquipmentEffect effect)
@@ -196,6 +199,10 @@ namespace Struikrovers.Core
         public static MovementPerks GetMovementPerks(Pawn pawn)
         {
             if (pawn == null || pawn.Type != pawn.BaseType)
+                return MovementPerks.None;
+
+            // A Bandit carrying a captive can't use movement equipment.
+            if (pawn.Type == PawnType.Bandit && pawn.IsCarrying)
                 return MovementPerks.None;
 
             MovementPerks perks = MovementPerks.None;
