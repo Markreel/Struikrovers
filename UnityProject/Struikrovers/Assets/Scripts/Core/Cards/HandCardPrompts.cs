@@ -401,37 +401,48 @@ namespace Struikrovers.Core
         public override DecisionPrompt Choose(int index) => null;
     }
 
-    /// One Man's Trash: pick one card from the discard pile. The UI answers this in the discard
-    /// browser (see DiscardBrowserView.BeginPick). Without a browser it falls back to the text panel.
+    /// One Man's Trash and the delivery reward: pick one card from the discard pile. The UI answers
+    /// this in the discard browser (see DiscardBrowserView.BeginPick). Without a browser it falls
+    /// back to the text panel.
     public sealed class OnesMansTrashPrompt : DecisionPrompt
     {
         private readonly CardSystem cards;
-        private readonly List<int> pileIndexes;       // option -> position in the discard pile
-        private readonly List<CardDefinition> choices; // option -> card
+        private readonly bool allowCancel;
+        private readonly List<int> pileIndexes;         // option -> position in the discard pile
+        private readonly List<CardDefinition> choices;  // option -> card
 
         private OnesMansTrashPrompt(
-            CardSystem cards, int team,
+            CardSystem cards, int team, string title, string detail, bool allowCancel,
             List<int> pileIndexes, List<CardDefinition> choices, List<PromptOption> options)
-            : base(team,
-                   "One Man's Trash: pick a card",
-                   "Click a card in the discard pile to take it.",
-                   options)
+            : base(team, title, detail, options)
         {
             this.cards = cards;
+            this.allowCancel = allowCancel;
             this.pileIndexes = pileIndexes;
             this.choices = choices;
         }
 
         /// Null when nothing can be picked. Called after the played card landed on the discard pile.
-        public static OnesMansTrashPrompt Create(CardSystem cards, int team)
+        public static OnesMansTrashPrompt Create(CardSystem cards, int team) =>
+            Build(cards, team, 1, "One Man's Trash: pick a card",
+                  "Click a card in the discard pile to take it.", true);
+
+        /// Reward for delivering a captive. The whole pile can be picked from, and there is no way back.
+        public static OnesMansTrashPrompt CreateDeliveryReward(CardSystem cards, int team) =>
+            Build(cards, team, 0, "Delivery reward: pick a card",
+                  "Click a card in the discard pile to take it.", false);
+
+        // skipTop = how many cards on top of the pile can't be taken (the played One Man's Trash).
+        private static OnesMansTrashPrompt Build(
+            CardSystem cards, int team, int skipTop, string title, string detail, bool allowCancel)
         {
             IReadOnlyList<CardDefinition> pile = cards.DiscardPile;
             var pileIndexes = new List<int>();
             var choices = new List<CardDefinition>();
             var options = new List<PromptOption>();
 
-            // Newest first. The top card is the One Man's Trash that was just played: it can't be taken back.
-            for (int i = pile.Count - 2; i >= 0; i--)
+            // Newest first.
+            for (int i = pile.Count - 1 - skipTop; i >= 0; i--)
             {
                 CardDefinition card = pile[i];
                 if (!CardSystem.CanPickWithTrash(card))
@@ -445,8 +456,11 @@ namespace Struikrovers.Core
             if (options.Count == 0)
                 return null;
 
-            return new OnesMansTrashPrompt(cards, team, pileIndexes, choices, options);
+            return new OnesMansTrashPrompt(
+                cards, team, title, detail, allowCancel, pileIndexes, choices, options);
         }
+
+        public override bool AllowsCancel => allowCancel;
 
         public bool IsPickable(int pileIndex) => pileIndexes.Contains(pileIndex);
 

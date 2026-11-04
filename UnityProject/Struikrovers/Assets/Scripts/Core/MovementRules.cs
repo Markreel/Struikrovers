@@ -38,17 +38,19 @@ namespace Struikrovers.Core
             p => CanBanditPass(p) || (carrying && IsOwnCastle(p, team));
 
         public Dictionary<Vector2Int, int> GetBanditDistances(
-            Vector2Int start, int maxSteps, int team = -1, bool carrying = false) =>
-            Pathfinder.GetDistances(start, maxSteps, BanditPassable(team, carrying));
+            Vector2Int start, int maxSteps, int team = -1, bool carrying = false,
+            MovementPerks perks = MovementPerks.None) =>
+            Pathfinder.GetDistances(start, maxSteps, BanditPassable(team, carrying), 0, null, perks);
 
         public HashSet<Vector2Int> GetBanditDestinations(
-            Vector2Int start, int maxSteps, int team = -1, bool carrying = false)
+            Vector2Int start, int maxSteps, int team = -1, bool carrying = false,
+            MovementPerks perks = MovementPerks.None)
         {
             var destinations = new HashSet<Vector2Int>();
             if (maxSteps < 0)
                 return destinations;
 
-            foreach (var entry in GetBanditDistances(start, maxSteps, team, carrying))
+            foreach (var entry in GetBanditDistances(start, maxSteps, team, carrying, perks))
                 if (CanBanditEnd(entry.Key, team, carrying))
                     destinations.Add(entry.Key);
 
@@ -58,6 +60,7 @@ namespace Struikrovers.Core
         /// Every tile this pawn may stop on. A pawn in its castle simply starts from the
         /// castle tile, so leaving costs the normal first step.
         /// Royalty, Bloodhound and Squire may not stop on a tile with an enemy pawn.
+        /// Movement items (diagonals, jumps, free steps...) are taken from the pawn's equipment.
         public HashSet<Vector2Int> GetDestinations(Pawn pawn, int movement)
         {
             var result = new HashSet<Vector2Int>();
@@ -65,7 +68,8 @@ namespace Struikrovers.Core
             if (pawn.Type == PawnType.Bandit)
             {
                 var distances = Pathfinder.GetDistances(
-                    pawn.Position, movement, BanditPassable(pawn.Team, pawn.IsCarrying));
+                    pawn.Position, movement, BanditPassable(pawn.Team, pawn.IsCarrying), 0, null,
+                    EquipmentEffects.GetMovementPerks(pawn));
 
                 foreach (Vector2Int p in distances.Keys)
                     if (CanBanditEnd(p, pawn.Team, pawn.IsCarrying))
@@ -121,15 +125,20 @@ namespace Struikrovers.Core
 
             int team = squire.Team;
 
+            // The Squire's own movement items (diagonals, Stump Stompers jumps) apply here too.
+            MoveGenerator moves = Pathfinder.CreateMoves(
+                EquipmentEffects.GetMovementPerks(squire), CanWalkerEnter);
+            var stepBuffer = new List<MoveStep>();
+
             // Layer s holds the fewest fights needed to stand on a tile after exactly s steps.
             var fightsByLayer = new List<Dictionary<Vector2Int, int>>
-    {
-        new Dictionary<Vector2Int, int> { [squire.Position] = 0 }
-    };
+            {
+                new Dictionary<Vector2Int, int> { [squire.Position] = 0 }
+            };
             var parentsByLayer = new List<Dictionary<Vector2Int, Vector2Int>>
-    {
-        new Dictionary<Vector2Int, Vector2Int>()
-    };
+            {
+                new Dictionary<Vector2Int, Vector2Int>()
+            };
 
             var bestFights = new Dictionary<Vector2Int, int>();
             var bestLayer = new Dictionary<Vector2Int, int>();
@@ -141,11 +150,12 @@ namespace Struikrovers.Core
 
                 foreach (var entry in fightsByLayer[s - 1])
                 {
-                    foreach (Vector2Int direction in BoardGrid.Directions)
+                    stepBuffer.Clear();
+                    moves.Collect(entry.Key, stepBuffer);
+
+                    foreach (MoveStep move in stepBuffer)
                     {
-                        Vector2Int next = entry.Key + direction;
-                        if (!CanWalkerEnter(next))
-                            continue;
+                        Vector2Int next = move.To;
 
                         int fights = entry.Value + (state.HasEnemySquireAt(next, team) ? 1 : 0);
 
@@ -208,8 +218,8 @@ namespace Struikrovers.Core
             return result;
         }
 
-        // Walkers (Royalty, Bloodhound, Squire) only cross grass. An enemy Squire blocks the
-        // path of a Squire: its tile can be reached (to fight) but not passed.
+        // Walkers (Royalty, Bloodhound, Squire) only cross grass, unless their items say otherwise.
+        // An enemy Squire blocks the path of a Squire: its tile can be reached (to fight) but not passed.
         private Dictionary<Vector2Int, int> GetWalkerDistances(Pawn pawn, int movement)
         {
             int team = pawn.Team;
@@ -218,7 +228,9 @@ namespace Struikrovers.Core
                 ? (Func<Vector2Int, bool>)(p => state.HasEnemySquireAt(p, team))
                 : null;
 
-            return Pathfinder.GetDistances(pawn.Position, movement, CanWalkerEnter, 0, blocksFurther);
+            return Pathfinder.GetDistances(
+                pawn.Position, movement, CanWalkerEnter, 0, blocksFurther,
+                EquipmentEffects.GetMovementPerks(pawn));
         }
     }
 }

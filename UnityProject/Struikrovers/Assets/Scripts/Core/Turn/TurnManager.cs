@@ -167,7 +167,10 @@ namespace Struikrovers.Core
             Dispatch(() =>
             {
                 if (CanManageEquipment && pawn != null && pawn.Team == TurnOwner)
+                {
                     Cards.MoveEquipment(pawn, slot, target);
+                    RefreshMoveChoices();
+                }
             });
         }
 
@@ -176,7 +179,10 @@ namespace Struikrovers.Core
             Dispatch(() =>
             {
                 if (CanManageEquipment && pawn != null && pawn.Team == TurnOwner)
+                { 
                     Cards.DiscardEquipment(pawn, slot);
+                    RefreshMoveChoices();
+                }
             });
         }
 
@@ -284,6 +290,7 @@ namespace Struikrovers.Core
         private void ResumeState(ITurnState previous)
         {
             CurrentState = previous;
+            RefreshMoveChoices();
             MarkChanged();
         }
 
@@ -680,6 +687,13 @@ namespace Struikrovers.Core
 
             dirty = false;
             Changed?.Invoke();
+        }
+
+        // Movement items can change while destinations are shown: recalculate what can be reached.
+        private void RefreshMoveChoices()
+        {
+            if (CurrentState is ChooseDestinationState choose)
+                choose.Refresh();
         }
     }
 }

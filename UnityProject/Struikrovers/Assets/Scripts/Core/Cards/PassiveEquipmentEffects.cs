@@ -45,4 +45,14 @@ namespace Struikrovers.Core
         public override bool GrantsAdvantage(Pawn wearer, CardDefinition card, RollKind rollKind) =>
             rollKind == kind;
     }
+
+    /// Movement items: the wearer's pathfinding changes (see MovementPerks).
+    internal sealed class MovementPerkEffect : EquipmentEffect
+    {
+        private readonly MovementPerks perks;
+
+        public MovementPerkEffect(MovementPerks perks) { this.perks = perks; }
+
+        public override MovementPerks GrantsMovement(Pawn wearer, CardDefinition card) => perks;
+    }
 }

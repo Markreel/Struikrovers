@@ -38,7 +38,7 @@ namespace Struikrovers.Presentation
                             $"and stole {e.SecondAmount} wood.";
                         return new TurnMessage(
                             clue,
-                            clue + " Picking from the discard pile will be added later.");
+                            clue + " Pick from the discard pile.");
                     }
 
                 case TurnEventKind.Sniffed:

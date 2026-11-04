@@ -28,6 +28,9 @@ namespace Struikrovers.Core
 
         /// True when this item lets the wearer's team look at a hand before stealing a card from it.
         bool RevealsStolenHand(Pawn wearer, CardDefinition card);
+
+        /// The movement rules this item gives the wearer.
+        MovementPerks GrantsMovement(Pawn wearer, CardDefinition card);
     }
 
     /// Base class with do-nothing defaults, so an effect only overrides what it needs.
@@ -41,6 +44,7 @@ namespace Struikrovers.Core
         public virtual bool OffersDiscardPick(Pawn looter, CardDefinition card) => false;
         public virtual bool GrantsAdvantage(Pawn wearer, CardDefinition card, RollKind kind) => false;
         public virtual bool RevealsStolenHand(Pawn wearer, CardDefinition card) => false;
+        public virtual MovementPerks GrantsMovement(Pawn wearer, CardDefinition card) => MovementPerks.None;
     }
 
     /// The effect of each equipment card, by card id. Cards without an entry only have their
@@ -61,6 +65,13 @@ namespace Struikrovers.Core
             Register("lucky-loafers", new RollAdvantageEffect(RollKind.Movement));
             Register("short-swords", new RollAdvantageEffect(RollKind.Combat));
             Register("bush-blade", new RollAdvantageEffect(RollKind.Combat));
+
+            //Movement
+            Register("skipping-shoes", new MovementPerkEffect(MovementPerks.SkippingShoes));
+            Register("tumbling-tunic", new MovementPerkEffect(MovementPerks.TumblingTunic));
+            Register("bush-dashers", new MovementPerkEffect(MovementPerks.BushDashers));
+            Register("stump-stompers", new MovementPerkEffect(MovementPerks.StumpStompers));
+            Register("slanted-slippers", new MovementPerkEffect(MovementPerks.SlantedSlippers));
         }
 
         public static void Register(string cardId, IEquipmentEffect effect)
@@ -179,6 +190,24 @@ namespace Struikrovers.Core
             }
 
             return false;
+        }
+
+        /// Everything a pawn's items change about its movement. A Bloodhound ignores equipment.
+        public static MovementPerks GetMovementPerks(Pawn pawn)
+        {
+            if (pawn == null || pawn.Type != pawn.BaseType)
+                return MovementPerks.None;
+
+            MovementPerks perks = MovementPerks.None;
+
+            foreach (CardDefinition item in pawn.Equipment.Items)
+            {
+                IEquipmentEffect effect = Get(item);
+                if (effect != null)
+                    perks |= effect.GrantsMovement(pawn, item);
+            }
+
+            return perks;
         }
     }
 }

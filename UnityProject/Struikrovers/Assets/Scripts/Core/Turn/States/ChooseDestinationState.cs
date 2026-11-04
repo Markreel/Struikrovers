@@ -146,5 +146,8 @@ namespace Struikrovers.Core
 
             FightNextBlocker();
         }
+
+        /// Works the reachable tiles out again, after equipment changed (movement items change them).
+        public void Refresh() => Enter();
     }
 }

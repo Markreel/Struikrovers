@@ -26,6 +26,7 @@ namespace Struikrovers.Core
             public Pawn Victim;
             public bool TakeAll;
             public Pawn LootPawn;
+            public bool DiscardReward;
         }
 
         private readonly GameState state;
@@ -133,6 +134,13 @@ namespace Struikrovers.Core
             pending.Enqueue(new PendingItem { Team = thief.Team, Thief = thief, Victim = victim, TakeAll = true });
         }
 
+        /// Delivery reward: the team picks 1 card from the discard pile. It waits until everything
+        /// else in the queue is resolved, so the stolen equipment can be picked too.
+        public void QueueDiscardPick(int team)
+        {
+            pending.Enqueue(new PendingItem { Team = team, DiscardReward = true });
+        }
+
         // ---- Resolving ----
 
         /// Resolves the next waiting item. Returns a prompt when the player has to decide
@@ -143,6 +151,9 @@ namespace Struikrovers.Core
                 return null;
 
             PendingItem item = pending.Dequeue();
+
+            if (item.DiscardReward)
+                return ResolveDiscardReward(item);
 
             if (item.Thief != null)
                 return ResolveTheft(item);
@@ -196,6 +207,22 @@ namespace Struikrovers.Core
                 return new DiscardPickPrompt(this, item.Team, false);
 
             return new LootSourcePrompt(this, item.Team);
+        }
+
+        // Waits behind every other waiting item (stolen equipment gets equipped or discarded first).
+        // Null when the pile has nothing to pick.
+        private DecisionPrompt ResolveDiscardReward(PendingItem item)
+        {
+            foreach (PendingItem other in pending)
+            {
+                if (!other.DiscardReward)
+                {
+                    pending.Enqueue(item);
+                    return null;
+                }
+            }
+
+            return OnesMansTrashPrompt.CreateDeliveryReward(this, item.Team);
         }
 
         /// Takes the top card of the draw pile right now. Null (and a message) when it is empty.

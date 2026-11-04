@@ -61,7 +61,7 @@ namespace Struikrovers.Core
             l.Add(CardDefinition.Equipment("charming-chestplate", "Charming Chestplate", C, royalty, 0, "Safe from being abducted by a Bandit when looting a bush."));
             l.Add(CardDefinition.Equipment("royal-blade", "Royal Blade", W, royalty, 0, "Gain the ability to stab instead of loot."));
             l.Add(CardDefinition.Equipment("keys-to-the-castle", "Keys to the Castle", W, royalty, 0, "May end the turn safely inside the castle if in reach. Bandits cannot abduct you there."));
-            l.Add(CardDefinition.Equipment("skipping-shoes", "Skipping Shoes", C, royalty, 0, "Every 2nd straight step doesn't cost a step."));
+            l.Add(CardDefinition.Equipment("skipping-shoes", "Skipping Shoes", C, royalty, 0, "Every 2nd step in a row in the same direction doesn't cost a step."));
             l.Add(CardDefinition.Equipment("shrieking-chalice", "Shrieking Chalice", W, royalty, 0, "When abducted, reveal your previous position on your turn."));
             l.Add(CardDefinition.Equipment("nimble-cloak", "Nimble Cloak", C, royalty, 0, "After your action, you may take 1 extra step."));
 

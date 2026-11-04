@@ -10,6 +10,9 @@ namespace Struikrovers.Core
         public static readonly Vector2Int[] Directions =
             { Vector2Int.up, Vector2Int.down, Vector2Int.left, Vector2Int.right };
 
+        public static readonly Vector2Int[] DiagonalDirections =
+    { new Vector2Int(1, 1), new Vector2Int(1, -1), new Vector2Int(-1, 1), new Vector2Int(-1, -1) };
+
         private readonly TerrainType[,] terrain;
 
         public int Columns { get; }

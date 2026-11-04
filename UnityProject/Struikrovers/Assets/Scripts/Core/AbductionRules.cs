@@ -114,7 +114,8 @@ namespace Struikrovers.Core
 
             // The Bandit will be carrying a captive, so its own castle is a destination.
             return movement.GetBanditDestinations(
-                royaltyPosition, remaining, bandit.Team, carrying: true);
+                royaltyPosition, remaining, bandit.Team, carrying: true,
+                perks: EquipmentEffects.GetMovementPerks(bandit));
         }
 
         /// Tiles holding an enemy Royalty that the Bandit can reach with this movement AND from
@@ -126,8 +127,8 @@ namespace Struikrovers.Core
             if (bandit == null || bandit.Type != PawnType.Bandit || !state.CanCarryMore(bandit))
                 return targets;
 
-            Dictionary<Vector2Int, int> distances =
-                movement.GetBanditDistances(bandit.Position, movementSteps);
+            Dictionary<Vector2Int, int> distances = movement.GetBanditDistances(
+     bandit.Position, movementSteps, perks: EquipmentEffects.GetMovementPerks(bandit));
 
             foreach (Pawn pawn in state.Pawns)
             {
@@ -209,6 +210,7 @@ namespace Struikrovers.Core
             {
                 state.ReturnCaptiveHome(bandit, royalty);
                 cards.QueueTakeAll(bandit, royalty);
+                cards.QueueDiscardPick(bandit.Team);
 
                 TeamState victim = state.Teams[royalty.Team];
                 int stolen = Mathf.Min(GameConfig.WoodStolenOnDelivery, victim.Wood);

@@ -2566,12 +2566,14 @@ MonoBehaviour:
     endOfTurnDraws: 1
     seed: 1
     topCards:
-    - yoink
-    - nab
-    - measuring-monocle
-    - switcheroo
-    - peek
-    - hand-over
+    - tumbling-tunic
+    - bolting-boots
+    - bush-dashers
+    - skipping-shoes
+    - tree-swingers
+    - slanted-slippers
+    - thorny-trunk
+    - stump-stompers
     debugCurses: []
   hideEnemyBandits: 0
   usePrivacyOverlay: 1
