@@ -31,6 +31,10 @@ namespace Struikrovers.Core
 
         /// The movement rules this item gives the wearer.
         MovementPerks GrantsMovement(Pawn wearer, CardDefinition card);
+
+        bool StabsAllAdjacent(Pawn wearer, CardDefinition card);
+
+        bool KillsBanditOnChop(Pawn wearer, CardDefinition card);
     }
 
     /// Base class with do-nothing defaults, so an effect only overrides what it needs.
@@ -45,6 +49,8 @@ namespace Struikrovers.Core
         public virtual bool GrantsAdvantage(Pawn wearer, CardDefinition card, RollKind kind) => false;
         public virtual bool RevealsStolenHand(Pawn wearer, CardDefinition card) => false;
         public virtual MovementPerks GrantsMovement(Pawn wearer, CardDefinition card) => MovementPerks.None;
+        public virtual bool StabsAllAdjacent(Pawn wearer, CardDefinition card) => false;
+        public virtual bool KillsBanditOnChop(Pawn wearer, CardDefinition card) => false;
     }
 
     /// The effect of each equipment card, by card id. Cards without an entry only have their
@@ -75,6 +81,13 @@ namespace Struikrovers.Core
             Register("thorny-trunk", new MovementPerkEffect(MovementPerks.ThornyTrunk));
             Register("tree-swingers", new MovementPerkEffect(MovementPerks.TreeSwingers));
             Register("bolting-boots", new MovementPerkEffect(MovementPerks.BoltingBoots));
+
+            //Actions
+            // Actions
+            Register("royal-blade", new GrantActionEffect(() => new StabAction()));
+            Register("tomahawk", new GrantActionEffect(() => new TomahawkAction()));
+            Register("halberd", new HalberdEffect());
+            Register("battleaxe", new BattleaxeEffect());
         }
 
         public static void Register(string cardId, IEquipmentEffect effect)
@@ -215,6 +228,20 @@ namespace Struikrovers.Core
             }
 
             return perks;
+        }
+
+        public static bool StabsAllAdjacent(Pawn pawn) => Any(pawn, (e, i) => e.StabsAllAdjacent(pawn, i));
+        public static bool KillsBanditOnChop(Pawn pawn) => Any(pawn, (e, i) => e.KillsBanditOnChop(pawn, i));
+
+        private static bool Any(Pawn pawn, System.Func<IEquipmentEffect, CardDefinition, bool> test)
+        {
+            if (pawn == null || pawn.Type != pawn.BaseType) return false; // Bloodhound ignores equipment
+            foreach (CardDefinition item in pawn.Equipment.Items)
+            {
+                IEquipmentEffect effect = Get(item);
+                if (effect != null && test(effect, item)) return true;
+            }
+            return false;
         }
     }
 }

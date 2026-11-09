@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using System.Linq;
 
 namespace Struikrovers.Core
 {
@@ -31,8 +32,16 @@ namespace Struikrovers.Core
             if (!terrain.IsTree())
                 return ActionOutcome.NotPerformed;
 
-            // A hidden enemy Bandit gets the chopper. The tree stays as it is.
-            if (ctx.ResolveAmbush(target))
+            var rescued = new List<Pawn>();
+
+            if (EquipmentEffects.KillsBanditOnChop(ctx.Actor))
+            {
+                Pawn hidden = ctx.State.GetBanditAt(target);
+                if (hidden != null && hidden.Team != ctx.Actor.Team)
+                    StabResolver.StabTile(ctx, target, rescued);
+            }
+
+            if (ctx.ResolveAmbush(target))   // no Bandit left after a Battleaxe kill, so no ambush
                 return ActionOutcome.Performed;
 
             int wood = terrain.IsPlentiful() ? GameConfig.YieldPlentiful : GameConfig.YieldNormal;
@@ -48,6 +57,7 @@ namespace Struikrovers.Core
                 ctx.Raise(TurnEvent.BanditExposed(own));
             }
 
+            StabResolver.StartRescues(ctx, rescued);
             return ActionOutcome.Performed;
         }
     }

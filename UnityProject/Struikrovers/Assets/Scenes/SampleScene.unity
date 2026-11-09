@@ -2566,13 +2566,12 @@ MonoBehaviour:
     endOfTurnDraws: 1
     seed: 1
     topCards:
-    - bolting-boots
-    - bush-dashers
+    - royal-blade
+    - tomahawk
     - skipping-shoes
-    - tree-swingers
+    - halberd
     - slanted-slippers
-    - thorny-trunk
-    - stump-stompers
+    - battleaxe
     - stump-stompers
     debugCurses: []
   hideEnemyBandits: 0

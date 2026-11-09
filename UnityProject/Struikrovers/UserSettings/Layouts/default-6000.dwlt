@@ -19,7 +19,7 @@ MonoBehaviour:
     width: 2560
     height: 1349
   m_ShowMode: 4
-  m_Title: Inspector
+  m_Title: Game
   m_RootView: {fileID: 2}
   m_MinSize: {x: 875, y: 300}
   m_MaxSize: {x: 10000, y: 10000}
@@ -118,7 +118,7 @@ MonoBehaviour:
   m_MinSize: {x: 300, y: 112}
   m_MaxSize: {x: 24288, y: 16192}
   vertical: 1
-  controlID: 19111
+  controlID: 2706
   draggingID: 0
 --- !u!114 &6
 MonoBehaviour:
@@ -144,7 +144,7 @@ MonoBehaviour:
   m_MinSize: {x: 300, y: 112}
   m_MaxSize: {x: 24288, y: 16192}
   vertical: 0
-  controlID: 19112
+  controlID: 2707
   draggingID: 0
 --- !u!114 &7
 MonoBehaviour:
@@ -170,7 +170,7 @@ MonoBehaviour:
   m_MinSize: {x: 200, y: 112}
   m_MaxSize: {x: 16192, y: 16192}
   vertical: 1
-  controlID: 19113
+  controlID: 2708
   draggingID: 0
 --- !u!114 &8
 MonoBehaviour:
@@ -196,7 +196,7 @@ MonoBehaviour:
   m_MinSize: {x: 200, y: 56}
   m_MaxSize: {x: 16192, y: 8096}
   vertical: 0
-  controlID: 19146
+  controlID: 2832
   draggingID: 0
 --- !u!114 &9
 MonoBehaviour:
@@ -277,7 +277,7 @@ MonoBehaviour:
   m_MinSize: {x: 200, y: 56}
   m_MaxSize: {x: 16192, y: 8096}
   vertical: 0
-  controlID: 19114
+  controlID: 2709
   draggingID: 0
 --- !u!114 &12
 MonoBehaviour:
@@ -307,7 +307,7 @@ MonoBehaviour:
   - {fileID: 23}
   - {fileID: 24}
   m_Selected: 0
-  m_LastSelected: 3
+  m_LastSelected: 1
 --- !u!114 &13
 MonoBehaviour:
   m_ObjectHideFlags: 52
@@ -2249,16 +2249,8 @@ MonoBehaviour:
       m_LastClickedID:
         m_Data: 0
       m_ExpandedIDs:
-      - m_Data: -9336
-      - m_Data: -7836
-      - m_Data: -7600
-      - m_Data: -3436
-      - m_Data: -3412
-      - m_Data: -3404
-      - m_Data: -1386
       - m_Data: -1382
-      - m_Data: 51774
-      - m_Data: 51862
+      - m_Data: 51882
       m_RenameOverlay:
         m_UserAcceptedRename: 0
         m_Name: 
@@ -2463,7 +2455,7 @@ MonoBehaviour:
     m_SkipHidden: 0
     m_SearchArea: 1
     m_Folders:
-    - Assets/Scripts
+    - Assets/Scripts/Core/Actions
     m_Globs: []
     m_ProductIds: 
     m_AnyWithAssetOrigin: 0
@@ -2473,7 +2465,7 @@ MonoBehaviour:
   m_ViewMode: 1
   m_StartGridSize: 64
   m_LastFolders:
-  - Assets/Scripts
+  - Assets/Scripts/Core/Actions
   m_LastFoldersGridSize: -1
   m_LastProjectPath: D:\Projects\Physical\Struikrovers\Struikrovers Repository\UnityProject\Struikrovers
   m_LockTracker:
@@ -2482,17 +2474,17 @@ MonoBehaviour:
   m_FolderTreeState:
     scrollPos: {x: 0, y: 0}
     m_SelectedIDs:
-    - m_Data: 53778
+    - m_Data: 53894
     m_LastClickedID:
-      m_Data: 53778
+      m_Data: 53894
     m_ExpandedIDs:
     - m_Data: 0
-    - m_Data: 53734
-    - m_Data: 53736
-    - m_Data: 53738
-    - m_Data: 53740
-    - m_Data: 53742
-    - m_Data: 53744
+    - m_Data: 53754
+    - m_Data: 53756
+    - m_Data: 53758
+    - m_Data: 53760
+    - m_Data: 53762
+    - m_Data: 53764
     m_RenameOverlay:
       m_UserAcceptedRename: 0
       m_Name: 
@@ -2526,12 +2518,12 @@ MonoBehaviour:
       m_Data: 0
     m_ExpandedIDs:
     - m_Data: 0
-    - m_Data: 53734
-    - m_Data: 53736
-    - m_Data: 53738
-    - m_Data: 53740
-    - m_Data: 53742
-    - m_Data: 53744
+    - m_Data: 53754
+    - m_Data: 53756
+    - m_Data: 53758
+    - m_Data: 53760
+    - m_Data: 53762
+    - m_Data: 53764
     m_RenameOverlay:
       m_UserAcceptedRename: 0
       m_Name: 
@@ -2560,10 +2552,10 @@ MonoBehaviour:
       m_ResourceFile: 
   m_ListAreaState:
     m_SelectedInstanceIDs:
-    - m_Data: 53778
+    - m_Data: 51844
     m_LastClickedEntityId:
-      m_Data: 53778
-    m_HadKeyboardFocusLastEvent: 1
+      m_Data: 51844
+    m_HadKeyboardFocusLastEvent: 0
     m_ExpandedInstanceIDs:
     - m_Data: 58656
     - m_Data: 58644
@@ -2669,12 +2661,12 @@ MonoBehaviour:
       m_Data: 0
     m_ExpandedIDs:
     - m_Data: 0
-    - m_Data: 53734
-    - m_Data: 53736
-    - m_Data: 53738
-    - m_Data: 53740
-    - m_Data: 53742
-    - m_Data: 53744
+    - m_Data: 53754
+    - m_Data: 53756
+    - m_Data: 53758
+    - m_Data: 53760
+    - m_Data: 53762
+    - m_Data: 53764
     m_RenameOverlay:
       m_UserAcceptedRename: 0
       m_Name: 
@@ -2708,12 +2700,12 @@ MonoBehaviour:
       m_Data: 0
     m_ExpandedIDs:
     - m_Data: 0
-    - m_Data: 53734
-    - m_Data: 53736
-    - m_Data: 53738
-    - m_Data: 53740
-    - m_Data: 53742
-    - m_Data: 53744
+    - m_Data: 53754
+    - m_Data: 53756
+    - m_Data: 53758
+    - m_Data: 53760
+    - m_Data: 53762
+    - m_Data: 53764
     m_RenameOverlay:
       m_UserAcceptedRename: 0
       m_Name: 

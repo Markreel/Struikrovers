@@ -28,40 +28,21 @@ namespace Struikrovers.Core
             if (!ctx.IsAdjacent(target) || !ctx.State.IsAttackable(target))
                 return ActionOutcome.NotPerformed;
 
-            Pawn bandit = ctx.State.GetBanditAt(target);
-
-            if (bandit == null)
-            {
-                ctx.Raise(TurnEvent.StabFoundNothing(ctx.Actor));
-                return ActionOutcome.Performed;
-            }
-
-            bool ownBandit = bandit.Team == ctx.Actor.Team;
+            var tiles = new List<Vector2Int>();
+            if (EquipmentEffects.StabsAllAdjacent(ctx.Actor))
+                tiles.AddRange(GetTargets(ctx));
+            else
+                tiles.Add(target);
 
             var rescued = new List<Pawn>();
-            int blocked = ctx.Turn.RescueRules.ReleaseCaptives(
-                bandit, target, new HashSet<Vector2Int>(), rescued);
+            bool found = false;
+            foreach (Vector2Int tile in tiles)
+                found |= StabResolver.StabTile(ctx, tile, rescued);
 
-            ctx.State.SendToCastle(bandit);
+            if (!found)
+                ctx.Raise(TurnEvent.StabFoundNothing(ctx.Actor));
 
-            // The Squire takes 1 piece of an enemy Bandit's equipment (no wood).
-            if (!ownBandit)
-                ctx.Turn.Cards.QueueSteal(ctx.Actor, bandit);
-
-            // Your own Bandit dies with no reward for anyone.
-            ctx.Raise(ownBandit
-                ? TurnEvent.StabKilledOwnBandit(ctx.Actor)
-                : TurnEvent.StabKilled(ctx.Actor, bandit));
-
-            if (blocked > 0)
-                ctx.Raise(TurnEvent.AttackBlocked(ctx.Actor, blocked));
-
-            if (rescued.Count > 0)
-            {
-                ctx.Raise(TurnEvent.StabFreedCaptives(ctx.Actor, rescued.Count));
-                ctx.BeginRescueRuns(rescued);
-            }
-
+            StabResolver.StartRescues(ctx, rescued);
             return ActionOutcome.Performed;
         }
     }
