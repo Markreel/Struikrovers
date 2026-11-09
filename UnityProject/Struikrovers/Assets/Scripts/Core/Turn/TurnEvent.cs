@@ -1,3 +1,5 @@
+using UnityEngine;
+
 namespace Struikrovers.Core
 {
     public enum TurnEventKind
@@ -39,7 +41,8 @@ namespace Struikrovers.Core
         CardYoinked,
         CardPlayCancelled,
         HandsSwapped,
-        EquipmentSwapped
+        EquipmentSwapped,
+        ChaliceRevealed
     }
 
     /// Something worth telling the players. Core never builds message text;
@@ -58,6 +61,7 @@ namespace Struikrovers.Core
         public CardDefinition Card { get; }
         public DiceRoll Dice { get; }
         public DiceRoll OtherDice { get; }
+        public Vector2Int Position { get; }
 
         private TurnEvent(
             TurnEventKind kind,
@@ -70,7 +74,8 @@ namespace Struikrovers.Core
             int team = -1,
             CardDefinition card = null, 
             DiceRoll dice = null, 
-            DiceRoll otherDice = null)
+            DiceRoll otherDice = null,
+            Vector2Int position = default)
         {
             Kind = kind;
             Actor = actor;
@@ -83,6 +88,7 @@ namespace Struikrovers.Core
             Card = card;
             Dice = dice;
             OtherDice = otherDice;
+            Position = position;
         }
 
         /// Actor = the Bandit, Target = the abducted Royalty.
@@ -225,5 +231,9 @@ namespace Struikrovers.Core
         /// Actor = the player's own pawn, Target = the opponent's pawn of the same type.
         public static TurnEvent EquipmentSwapped(Pawn mine, Pawn theirs) =>
             new TurnEvent(TurnEventKind.EquipmentSwapped, mine, theirs, team: mine.Team);
+
+        /// Actor = the abducted Royalty, Position = the tile it stood on.
+        public static TurnEvent ChaliceRevealed(Pawn royalty, Vector2Int position) =>
+            new TurnEvent(TurnEventKind.ChaliceRevealed, royalty, team: royalty.Team, position: position);
     }
 }

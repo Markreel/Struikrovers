@@ -2566,13 +2566,11 @@ MonoBehaviour:
     endOfTurnDraws: 1
     seed: 1
     topCards:
-    - royal-blade
-    - tomahawk
-    - skipping-shoes
-    - halberd
-    - slanted-slippers
-    - battleaxe
-    - stump-stompers
+    - flaying-fishpole
+    - keys-to-the-castle
+    - prowling-pincers
+    - shrieking-chalice
+    - nimble-cloak
     debugCurses: []
   hideEnemyBandits: 0
   usePrivacyOverlay: 1

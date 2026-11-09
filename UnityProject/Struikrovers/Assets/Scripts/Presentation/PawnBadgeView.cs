@@ -4,7 +4,7 @@ using UnityEngine.UI;
 
 namespace Struikrovers.Presentation
 {
-    /// One pawn token: a team-coloured badge with an icon (or an initial as fallback).
+    /// One token: a team-coloured badge with an icon (or an initial as fallback).
     public sealed class PawnBadgeView : MonoBehaviour
     {
         [SerializeField] private Image badgeImage;
@@ -17,16 +17,22 @@ namespace Struikrovers.Presentation
             badgeImage.sprite = theme.BadgeSprite;
             badgeImage.color = theme.GetTeamColor(marker.Team);
 
-            Sprite icon = theme.GetPawnSprite(marker.Type);
+            // The Chalice has no icon yet: it shows a "C1" placeholder label.
+            // Later, assign the card's own icon here.
+            Sprite icon = marker.IsChalice ? null : theme.GetPawnSprite(marker.Type);
             iconImage.sprite = icon;
             iconImage.gameObject.SetActive(icon != null);
 
             fallbackLabel.gameObject.SetActive(icon == null);
             if (icon == null)
-                fallbackLabel.text = theme.GetPawnInitial(marker.Type) + (marker.Team + 1);
+            {
+                fallbackLabel.text = marker.IsChalice
+                    ? "C" + (marker.Team + 1)
+                    : theme.GetPawnInitial(marker.Type) + (marker.Team + 1);
+            }
 
             captiveLabel.gameObject.SetActive(marker.IsCaptive);
-            gameObject.name = "PawnBadge_T" + (marker.Team + 1);
+            gameObject.name = (marker.IsChalice ? "ChaliceMarker_T" : "PawnBadge_T") + (marker.Team + 1);
         }
     }
 }

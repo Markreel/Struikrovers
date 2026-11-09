@@ -16,6 +16,12 @@ namespace Struikrovers.Core
         public IReadOnlyList<TeamState> Teams => teams;
         public int TeamCount => teams.Length;
 
+        private readonly Dictionary<int, Vector2Int> chaliceSpots = new Dictionary<int, Vector2Int>();
+
+        /// Shrieking Chalice: per team, the tile where its Royalty was abducted. Public.
+        public IReadOnlyDictionary<int, Vector2Int> ChaliceSpots => chaliceSpots;
+        private readonly HashSet<int> chaliceTeams = new HashSet<int>();
+
         public GameState(BoardGrid grid, int teamCount)
         {
             Grid = grid;
@@ -116,6 +122,12 @@ namespace Struikrovers.Core
             if (!CanCarryMore(bandit)) return false;
 
             bandit.AddCaptive(royalty);
+
+            // Decide now: once the Royalty is a Bloodhound its equipment is ignored.
+            if (EquipmentEffects.MarksAbductionSpot(royalty)) chaliceTeams.Add(royalty.Team);
+            else chaliceTeams.Remove(royalty.Team);
+            chaliceSpots.Remove(royalty.Team);   // nothing is shown at abduction
+
             royalty.Type = PawnType.Bloodhound;
             return true;
         }
@@ -131,6 +143,7 @@ namespace Struikrovers.Core
 
             from.RemoveCaptive(captive);
             to.AddCaptive(captive);
+            chaliceSpots.Remove(captive.Team);   // the new captor has no recorded start yet
             return true;
         }
 
@@ -139,6 +152,8 @@ namespace Struikrovers.Core
         {
             if (!bandit.RemoveCaptive(captive)) return;
 
+            chaliceSpots.Remove(captive.Team);
+            chaliceTeams.Remove(captive.Team);
             captive.Type = PawnType.Royalty;
             captive.Position = position;
         }
@@ -148,6 +163,8 @@ namespace Struikrovers.Core
         {
             if (!bandit.RemoveCaptive(captive)) return;
 
+            chaliceSpots.Remove(captive.Team);
+            chaliceTeams.Remove(captive.Team);
             captive.Type = PawnType.Royalty;
             SendToCastle(captive);
         }
@@ -155,6 +172,24 @@ namespace Struikrovers.Core
         public void SendToCastle(Pawn pawn)
         {
             pawn.Position = Grid.GetCastlePosition(pawn.Team);
+        }
+
+        /// Called when a Bloodhound's turn starts. Moves the Chalice marker to the captor's
+        /// previous tile. Returns that tile, or null when there is nothing to show.
+        public Vector2Int? RefreshChalice(Pawn bloodhound)
+        {
+            int team = bloodhound.Team;
+            chaliceSpots.Remove(team);
+
+            if (bloodhound.Type != PawnType.Bloodhound || !chaliceTeams.Contains(team))
+                return null;
+
+            Vector2Int? spot = GetCaptor(bloodhound)?.CarryStartPosition;
+            if (spot == null || Grid.IsCastle(spot.Value))
+                return null;
+
+            chaliceSpots[team] = spot.Value;
+            return spot;
         }
     }
 }

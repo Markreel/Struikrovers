@@ -243,7 +243,11 @@ namespace Struikrovers.Presentation
                             $"Player {e.Target.Team + 1}'s {e.Target.BaseType} swapped all their equipment.";
                         return new TurnMessage(clue, clue);
                     }
-
+                case TurnEventKind.ChaliceRevealed:
+                    {
+                        string text = $"Team {e.Team + 1}'s Shrieking Chalice shrieks: their captured Royalty was last held at tile ({e.Position.x}, {e.Position.y}).";
+                        return new TurnMessage(text, text);
+                    }
                 default:
                     return new TurnMessage(null);
             }
@@ -444,6 +448,9 @@ namespace Struikrovers.Presentation
 
                         break;
                     }
+
+                case NimbleStepState _:
+                    return " | Nimble Cloak: click a highlighted tile for one extra step, or press Finish Activation.";
 
                 default: // AwaitRollState
                     message += pawn.Type == PawnType.Bandit

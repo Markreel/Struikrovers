@@ -10,6 +10,9 @@ namespace Struikrovers.Core
         private readonly List<IPawnAction> actions = new List<IPawnAction>();
         private readonly List<object> actionSources = new List<object>();
         private Vector2Int position;
+        /// For a Bandit: where it stood at the start of its latest activation, but only
+        /// if it was already carrying a captive then. Used by the Shrieking Chalice.
+        public Vector2Int? CarryStartPosition { get; internal set; }
 
         public int Team { get; }
 

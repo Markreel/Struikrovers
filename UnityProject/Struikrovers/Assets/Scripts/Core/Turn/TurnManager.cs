@@ -579,6 +579,13 @@ namespace Struikrovers.Core
                 return;
             }
 
+            if (ShouldOfferNimbleStep())
+            {
+                nimbleStepOffered = true;
+                ChangeState(new NimbleStepState(this));
+                return;
+            }
+
             AdvanceToNextPawn();
         }
 
@@ -616,6 +623,7 @@ namespace Struikrovers.Core
             // rather than advancing from the last rescuer.
             IsRescueRun = false;
             bool resumeWithAction = false;
+            bool resumed = false;
 
             if (resumePoint.HasValue)
             {
@@ -624,10 +632,13 @@ namespace Struikrovers.Core
                 ActivePawn = resumePoint.Value.Pawn;
                 resumeWithAction = resumePoint.Value.ResumeWithAction;
                 resumePoint = null;
+                resumed = true;
             }
 
             if (resumeWithAction)
                 ChangeState(new ChooseActionState(this));
+            else if (resumed)
+                FinishActivationNow();
             else
                 AdvanceToNextPawn();
         }
@@ -661,6 +672,23 @@ namespace Struikrovers.Core
         private void ActivateCurrentSlot()
         {
             ActivePawn = State.GetPawnForSlot(CurrentTeam, GameConfig.TurnOrder[CurrentSlotIndex]);
+            nimbleStepOffered = false;
+
+            if (ActivePawn.Type == PawnType.Bandit)
+            {
+                // Remember where a carrying Bandit started this turn (before it moves).
+                ActivePawn.CarryStartPosition = ActivePawn.IsCarrying
+                    ? ActivePawn.Position
+                    : (Vector2Int?)null;
+            }
+            else if (ActivePawn.Type == PawnType.Bloodhound)
+            {
+                // The Chalice marker updates at the start of the Bloodhound's turn.
+                Vector2Int? spot = State.RefreshChalice(ActivePawn);
+                if (spot.HasValue)
+                    Raise(TurnEvent.ChaliceRevealed(ActivePawn, spot.Value));
+            }
+
             ChangeState(new AwaitRollState(this));
         }
 
@@ -710,6 +738,17 @@ namespace Struikrovers.Core
 
             pawn.IsExposed = true;
             Raise(TurnEvent.BanditExposed(pawn));
+        }
+
+
+        private bool nimbleStepOffered;
+        private bool ShouldOfferNimbleStep()
+        {
+            Pawn pawn = ActivePawn;
+            return !nimbleStepOffered && pawn != null &&
+                   pawn.Type == PawnType.Royalty &&
+                   EquipmentEffects.GrantsExtraStep(pawn) &&
+                   NimbleStepState.FindSteps(this, pawn).Count > 0;
         }
     }
 }

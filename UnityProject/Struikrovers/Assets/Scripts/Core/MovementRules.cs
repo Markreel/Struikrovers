@@ -85,8 +85,10 @@ namespace Struikrovers.Core
                 return result;
             }
 
+            Func<Vector2Int, bool> canEnter = GetWalkerEnter(pawn);
+
             foreach (Vector2Int p in GetWalkerDistances(pawn, movement).Keys)
-                if (CanWalkerEnter(p) && !state.HasEnemyPawnAt(p, pawn.Team))
+                if (canEnter(p) && !state.HasEnemyPawnAt(p, pawn.Team))
                     result.Add(p);
 
             return result;
@@ -243,8 +245,8 @@ namespace Struikrovers.Core
                 : null;
 
             return Pathfinder.GetDistances(
-    pawn.Position, movement, CanWalkerEnter, 0, blocksFurther,
-    EquipmentEffects.GetMovementPerks(pawn), GetBoltOpen(pawn));
+                pawn.Position, movement, GetWalkerEnter(pawn), 0, blocksFurther,
+                EquipmentEffects.GetMovementPerks(pawn), GetBoltOpen(pawn));
         }
 
         /// Tiles a Bolting Boots shot may cross and land on: open grass without an enemy pawn.
@@ -269,6 +271,16 @@ namespace Struikrovers.Core
             public bool Equals(PathNode other) => Position == other.Position && Direction == other.Direction;
             public override bool Equals(object obj) => obj is PathNode other && Equals(other);
             public override int GetHashCode() => Position.GetHashCode() * 397 ^ Direction;
+        }
+
+        // Keys to the Castle: besides grass, the wearer may also enter (and stay in) its own castle.
+        private Func<Vector2Int, bool> GetWalkerEnter(Pawn pawn)
+        {
+            if (pawn.Type != PawnType.Royalty || !EquipmentEffects.AllowsCastleStay(pawn))
+                return CanWalkerEnter;
+
+            Vector2Int castle = grid.GetCastlePosition(pawn.Team);
+            return p => CanWalkerEnter(p) || p == castle;
         }
     }
 }

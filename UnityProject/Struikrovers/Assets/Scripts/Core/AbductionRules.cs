@@ -224,5 +224,56 @@ namespace Struikrovers.Core
             state.Teams[bandit.Team].Wood += totalWoodStolen;
             return new DeliveryResult(delivered.Count, totalWoodStolen);
         }
+
+        /// Prowling Pincers: true when the Bandit could abduct the Royalty exactly 'distance' tiles
+        /// away (Manhattan) right now.
+        public bool CanAbductAtDistance(Pawn bandit, Vector2Int target, int distance)
+        {
+            if (bandit == null || bandit.Type != PawnType.Bandit || bandit.AtCastle)
+                return false;
+
+            if (BoardGrid.Manhattan(bandit.Position, target) != distance)
+                return false;
+
+            Pawn candidate = state.GetRoyaltyAt(target);
+            return candidate != null && candidate.Team != bandit.Team && state.CanCarryMore(bandit);
+        }
+
+        public bool TryAbductAtDistance(Pawn bandit, Vector2Int target, int distance, out Pawn royalty)
+        {
+            royalty = null;
+
+            if (!CanAbductAtDistance(bandit, target, distance))
+                return false;
+
+            Pawn candidate = state.GetRoyaltyAt(target);
+            if (candidate == null || !state.TryCapture(candidate, bandit))
+                return false;
+
+            royalty = candidate;
+            return true;
+        }
+
+        public HashSet<Vector2Int> GetTargetsAtDistance(Pawn bandit, int distance)
+        {
+            var targets = new HashSet<Vector2Int>();
+
+            if (bandit == null || bandit.Type != PawnType.Bandit ||
+                bandit.AtCastle || !state.CanCarryMore(bandit))
+            {
+                return targets;
+            }
+
+            foreach (Pawn pawn in state.Pawns)
+            {
+                if (pawn.Type == PawnType.Royalty && !pawn.AtCastle && pawn.Team != bandit.Team &&
+                    BoardGrid.Manhattan(bandit.Position, pawn.Position) == distance)
+                {
+                    targets.Add(pawn.Position);
+                }
+            }
+
+            return targets;
+        }
     }
 }

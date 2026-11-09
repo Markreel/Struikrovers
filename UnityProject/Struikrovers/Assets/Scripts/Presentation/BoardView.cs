@@ -278,6 +278,10 @@ namespace Struikrovers.Presentation
                     Add(bandit.Position, new PawnMarker(captive.Team, PawnType.Royalty, true));
             }
 
+            // Shrieking Chalice: public marker where a Royalty was abducted.
+            foreach (KeyValuePair<int, Vector2Int> spot in state.ChaliceSpots)
+                Add(spot.Value, PawnMarker.Chalice(spot.Key));
+
             return lookup;
         }
 

@@ -33,8 +33,10 @@ namespace Struikrovers.Core
         MovementPerks GrantsMovement(Pawn wearer, CardDefinition card);
 
         bool StabsAllAdjacent(Pawn wearer, CardDefinition card);
-
         bool KillsBanditOnChop(Pawn wearer, CardDefinition card);
+        bool GrantsExtraStep(Pawn wearer, CardDefinition card);
+        bool AllowsCastleStay(Pawn wearer, CardDefinition card);
+        bool MarksAbductionSpot(Pawn wearer, CardDefinition card);
     }
 
     /// Base class with do-nothing defaults, so an effect only overrides what it needs.
@@ -51,6 +53,9 @@ namespace Struikrovers.Core
         public virtual MovementPerks GrantsMovement(Pawn wearer, CardDefinition card) => MovementPerks.None;
         public virtual bool StabsAllAdjacent(Pawn wearer, CardDefinition card) => false;
         public virtual bool KillsBanditOnChop(Pawn wearer, CardDefinition card) => false;
+        public virtual bool GrantsExtraStep(Pawn wearer, CardDefinition card) => false;
+        public virtual bool AllowsCastleStay(Pawn wearer, CardDefinition card) => false;
+        public virtual bool MarksAbductionSpot(Pawn wearer, CardDefinition card) => false;
     }
 
     /// The effect of each equipment card, by card id. Cards without an entry only have their
@@ -83,11 +88,16 @@ namespace Struikrovers.Core
             Register("bolting-boots", new MovementPerkEffect(MovementPerks.BoltingBoots));
 
             //Actions
-            // Actions
             Register("royal-blade", new GrantActionEffect(() => new StabAction()));
             Register("tomahawk", new GrantActionEffect(() => new TomahawkAction()));
             Register("halberd", new HalberdEffect());
             Register("battleaxe", new BattleaxeEffect());
+            Register("prowling-pincers", new GrantActionEffect(() => new PincersAbductAction()));
+            Register("flaying-fishpole", new GrantActionEffect(
+                () => new FishpoleLootAction(), pawn => pawn.BaseType != PawnType.Bandit));
+            Register("nimble-cloak", new NimbleCloakEffect());
+            Register("keys-to-the-castle", new KeysToTheCastleEffect());
+            Register("shrieking-chalice", new ShriekingChaliceEffect());
         }
 
         public static void Register(string cardId, IEquipmentEffect effect)
@@ -231,6 +241,9 @@ namespace Struikrovers.Core
         }
 
         public static bool StabsAllAdjacent(Pawn pawn) => Any(pawn, (e, i) => e.StabsAllAdjacent(pawn, i));
+        public static bool GrantsExtraStep(Pawn pawn) => Any(pawn, (e, c) => e.GrantsExtraStep(pawn, c));
+        public static bool AllowsCastleStay(Pawn pawn) => Any(pawn, (e, c) => e.AllowsCastleStay(pawn, c));
+        public static bool MarksAbductionSpot(Pawn pawn) => Any(pawn, (e, c) => e.MarksAbductionSpot(pawn, c));
         public static bool KillsBanditOnChop(Pawn pawn) => Any(pawn, (e, i) => e.KillsBanditOnChop(pawn, i));
 
         private static bool Any(Pawn pawn, System.Func<IEquipmentEffect, CardDefinition, bool> test)
